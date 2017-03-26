@@ -1,2 +1,2 @@
-# goplayground
-go playground
+# Go playground
+This's go playground, enjoy :) 
