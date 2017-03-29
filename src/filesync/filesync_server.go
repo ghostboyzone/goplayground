@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 type Message struct {
@@ -53,22 +54,22 @@ func parseMsg(message Message) {
 	log.Println(message.Path)
 	switch message.MsgType {
 	case 1:
-		// ret, err := cmdObj.Output()
-		// log.Println(filepath.Dir(message.Path))
-
-		parentPath := filepath.Dir(message.Path)
+		path := strings.Replace(message.Path, "\\", "/", -1)
+		log.Println(path)
+		parentPath := filepath.Dir(path)
 
 		err := os.MkdirAll(parentPath, 0777)
 		if err != nil {
 			log.Println(err)
 		}
 
-		err = ioutil.WriteFile(message.Path, bytes.NewBufferString(message.Data).Bytes(), 0777)
+		err = ioutil.WriteFile(path, bytes.NewBufferString(message.Data).Bytes(), 0777)
 		if err != nil {
 			log.Println(err)
 		}
 	case 2:
-		err := os.MkdirAll(message.Path, 0777)
+		path := strings.Replace(message.Path, "\\", "/", -1)
+		err := os.MkdirAll(path, 0777)
 		if err != nil {
 			log.Println(err)
 		}

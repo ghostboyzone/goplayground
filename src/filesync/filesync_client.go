@@ -34,10 +34,11 @@ var (
 func main() {
 	rMap = make(hashMap)
 	lastModifyMap = make(tHashMap)
-	rMap["E:\\code\\waimai\\x_commodity\\commodity\\"] = "/home/map/test_20170329/"
-	// rMap["E:\\code\\waimai\\x_commodity\\commodity\\"] = "E:\\code\\waimai\\x_commodity\\commodity1\\"
+	// rMap["E:\\code\\waimai\\x_commodity\\commodity\\"] = "/home/map/test_20170329/"
+	rMap["E:\\code\\waimai\\x_commodity\\commodity\\"] = "E:\\code\\waimai\\x_commodity\\commodity1\\"
 
-	u := url.URL{Scheme: "ws", Host: "10.19.160.65:8385", Path: "/echo"}
+	// u := url.URL{Scheme: "ws", Host: "10.19.160.65:8385", Path: "/echo"}
+	u := url.URL{Scheme: "ws", Host: "localhost:8989", Path: "/echo"}
 	log.Printf("connecting to %s", u.String())
 	var err error
 	conn, _, err = websocket.DefaultDialer.Dial(u.String(), nil)
@@ -82,6 +83,10 @@ func prepareSend(localPath string, remotePath string, isDir bool) (msg Message) 
 }
 
 func walkFuc(path string, info os.FileInfo, err error) error {
+	if strings.Contains(path, ".git") {
+		return nil
+	}
+
 	// return nil
 	if lastModifyMap[path] == 0 {
 		lastModifyMap[path] = info.ModTime().Unix()
