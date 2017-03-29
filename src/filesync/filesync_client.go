@@ -34,10 +34,10 @@ var (
 func main() {
 	rMap = make(hashMap)
 	lastModifyMap = make(tHashMap)
-	// rMap["E:\\code\\waimai\\x_commodity\\commodity\\"] = "/home/map/test_20170329/"
-	rMap["E:\\code\\waimai\\x_commodity\\commodity\\"] = "E:\\code\\waimai\\x_commodity\\commodity1\\"
+	rMap["E:\\code\\waimai\\x_commodity\\commodity\\"] = "/home/map/test_20170329/"
+	// rMap["E:\\code\\waimai\\x_commodity\\commodity\\"] = "E:\\code\\waimai\\x_commodity\\commodity1\\"
 
-	u := url.URL{Scheme: "ws", Host: "localhost:8989", Path: "/echo"}
+	u := url.URL{Scheme: "ws", Host: "10.19.160.65:8385", Path: "/echo"}
 	log.Printf("connecting to %s", u.String())
 	var err error
 	conn, _, err = websocket.DefaultDialer.Dial(u.String(), nil)
@@ -50,7 +50,7 @@ func main() {
 		startTime := time.Now().Unix()
 		for tmpPath, tmpNewPath := range rMap {
 			log.Println("Start Process: [local]", tmpPath, ", [remote]", tmpNewPath)
-			err := filepath.Walk(tmpPath, walkFuc)
+			_ = filepath.Walk(tmpPath, walkFuc)
 			log.Println("Done Process: [local]", tmpPath, ", [remote]", tmpNewPath)
 		}
 		endTime := time.Now().Unix()

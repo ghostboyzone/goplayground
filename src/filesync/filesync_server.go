@@ -77,5 +77,6 @@ func parseMsg(message Message) {
 
 func main() {
 	http.HandleFunc("/echo", echo)
-	log.Fatal(http.ListenAndServe("localhost:8989", nil))
+	log.Println("listen at port 8989")
+	log.Fatal(http.ListenAndServe(":8989", nil))
 }
