@@ -4,6 +4,8 @@ import (
 	// "fmt"
 	"bytes"
 	"encoding/json"
+	myConf "filesync/config"
+	"flag"
 	"github.com/gorilla/websocket"
 	"io/ioutil"
 	"log"
@@ -19,11 +21,27 @@ type Message struct {
 	Path    string `json:"path"`
 }
 
-var upgrader = websocket.Upgrader{
-	ReadBufferSize:  4096,
-	WriteBufferSize: 4096,
-} // use default options
+var (
+	upgrader  websocket.Upgrader
+	parseConf myConf.ConfigConf
+)
 
+func main() {
+	confFile := flag.String("conf", "config.json", "-conf config.json")
+	flag.Parse()
+	parseConf = myConf.NewConf(*confFile)
+	// set conf
+	upgrader = websocket.Upgrader{
+		ReadBufferSize:  parseConf.Server.ReadBufferSize,
+		WriteBufferSize: parseConf.Server.WriteBufferSize,
+	}
+
+	http.HandleFunc("/echo", echo)
+	log.Println("listen at port => ", parseConf.Server.Addr)
+	log.Fatal(http.ListenAndServe(parseConf.Server.Addr, nil))
+}
+
+// websocket echo message
 func echo(w http.ResponseWriter, r *http.Request) {
 	c, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -50,6 +68,7 @@ func echo(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// parse different type msg
 func parseMsg(message Message) {
 	log.Println(message.Path)
 	switch message.MsgType {
@@ -74,10 +93,4 @@ func parseMsg(message Message) {
 			log.Println(err)
 		}
 	}
-}
-
-func main() {
-	http.HandleFunc("/echo", echo)
-	log.Println("listen at port 8989")
-	log.Fatal(http.ListenAndServe(":8989", nil))
 }

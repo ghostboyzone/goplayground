@@ -6,6 +6,8 @@ import (
 	// "encoding/binary"
 	"encoding/json"
 	"errors"
+	myConf "filesync/config"
+	"flag"
 	"github.com/gorilla/websocket"
 	"io/ioutil"
 	"log"
@@ -22,30 +24,26 @@ type Message struct {
 	Path    string `json:"path"`
 }
 
-type hashMap map[string]string
 type tHashMap map[string]int64
 
 var (
-	rMap          hashMap
+	rMap          myConf.HashMap
+	excludeFiles  []string
 	lastModifyMap tHashMap
-	conn          *websocket.Conn
+	// conn          *websocket.Conn
+	max_ch    chan int
+	parseConf myConf.ConfigConf
 )
 
 func main() {
-	rMap = make(hashMap)
+	confFile := flag.String("conf", "config.json", "-conf config.json")
+	flag.Parse()
+	parseConf = myConf.NewConf(*confFile)
+	rMap = parseConf.GetPaths()
+	excludeFiles = parseConf.Client.ExcludeFiles
 	lastModifyMap = make(tHashMap)
-	// rMap["E:\\code\\waimai\\x_commodity\\commodity\\"] = "/home/map/test_20170329/"
-	rMap["E:\\code\\waimai\\x_commodity\\commodity\\"] = "E:\\code\\waimai\\x_commodity\\commodity1\\"
 
-	// u := url.URL{Scheme: "ws", Host: "10.19.160.65:8385", Path: "/echo"}
-	u := url.URL{Scheme: "ws", Host: "localhost:8989", Path: "/echo"}
-	log.Printf("connecting to %s", u.String())
-	var err error
-	conn, _, err = websocket.DefaultDialer.Dial(u.String(), nil)
-	if err != nil {
-		log.Fatal("dial:", err)
-	}
-	defer conn.Close()
+	max_ch = make(chan int, parseConf.Client.SendChannels)
 
 	for {
 		startTime := time.Now().Unix()
@@ -82,12 +80,31 @@ func prepareSend(localPath string, remotePath string, isDir bool) (msg Message) 
 	return msg
 }
 
+func sendToRemote(encode_msg []byte) {
+	u := url.URL{Scheme: "ws", Host: parseConf.Client.Addr, Path: "/echo"}
+	log.Printf("connecting to %s", u.String())
+	var err error
+	conn, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
+	if err != nil {
+		log.Fatal("dial:", err)
+	}
+	defer conn.Close()
+
+	err = conn.WriteMessage(websocket.BinaryMessage, encode_msg)
+	if err != nil {
+		log.Println("write error: ", err)
+	}
+	<-max_ch
+}
+
 func walkFuc(path string, info os.FileInfo, err error) error {
-	if strings.Contains(path, ".git") {
-		return nil
+	for _, ex_path := range excludeFiles {
+		if strings.Contains(path, ex_path) {
+			log.Println("Skip: ", path, " , reason: ", ex_path)
+			return nil
+		}
 	}
 
-	// return nil
 	if lastModifyMap[path] == 0 {
 		lastModifyMap[path] = info.ModTime().Unix()
 		newPath, err := getRemoteFilePath(path)
@@ -98,10 +115,9 @@ func walkFuc(path string, info os.FileInfo, err error) error {
 
 		sendMsg := prepareSend(path, newPath, info.IsDir())
 		encode_msg, err := json.Marshal(sendMsg)
-		err = conn.WriteMessage(websocket.BinaryMessage, encode_msg)
-		if err != nil {
-			log.Println("write error: ", err)
-		}
+
+		max_ch <- 1
+		go sendToRemote(encode_msg)
 	} else {
 		if info.ModTime().Unix() != lastModifyMap[path] {
 			lastModifyMap[path] = info.ModTime().Unix()
@@ -113,10 +129,9 @@ func walkFuc(path string, info os.FileInfo, err error) error {
 
 			sendMsg := prepareSend(path, newPath, info.IsDir())
 			encode_msg, err := json.Marshal(sendMsg)
-			err = conn.WriteMessage(websocket.BinaryMessage, encode_msg)
-			if err != nil {
-				log.Println("write error: ", err)
-			}
+
+			max_ch <- 1
+			go sendToRemote(encode_msg)
 		}
 	}
 	return nil

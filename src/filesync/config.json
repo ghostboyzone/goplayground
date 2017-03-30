@@ -1,0 +1,24 @@
+{
+    "server": {
+        "addr": ":8989",
+        "read_buffer_size": 4096,
+        "write_buffer_size": 4096
+    },
+    "client": {
+        "addr": "10.19.160.65:8385",
+        "send_channels": 15,
+        "paths": [
+            {
+                "local": "E:\\code\\waimai\\x_commodity\\commodity\\",
+                "remote": "/home/map/odp_commodity/app/commodity/"
+            },
+            {
+                "local": "E:\\code\\waimai\\x_commodity\\upcui\\",
+                "remote": "/home/map/odp_commodity/app/upcui/"
+            }
+        ],
+        "exclude_files": [
+            ".git"
+        ]
+    }
+}
