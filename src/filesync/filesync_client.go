@@ -100,7 +100,7 @@ func sendToRemote(encode_msg []byte) {
 func walkFuc(path string, info os.FileInfo, err error) error {
 	for _, ex_path := range excludeFiles {
 		if strings.Contains(path, ex_path) {
-			log.Println("Skip: ", path, " , reason: ", ex_path)
+			// log.Println("Skip: ", path, " , reason: ", ex_path)
 			return nil
 		}
 	}
