@@ -57,9 +57,13 @@ func echo(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 		// log.Printf("recv: %s", message)
-		var decodeMsg Message
+		var decodeMsg []Message
 		json.Unmarshal(message, &decodeMsg)
-		parseMsg(decodeMsg)
+
+		for _, oneMsg := range decodeMsg {
+			parseMsg(oneMsg)
+		}
+		// parseMsg(decodeMsg)
 
 		// err = c.WriteMessage(mt, message)
 		// if err != nil {
