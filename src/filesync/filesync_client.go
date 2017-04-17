@@ -67,7 +67,8 @@ func main() {
 			}
 
 			if len(fileMsgs) > 0 {
-				arrFileMsgs := sliceMsg(fileMsgs, 100)
+				arrFileMsgs := sliceMsg(fileMsgs, parseConf.Client.BatchSendFiles)
+
 				for _, oneFileMsgs := range arrFileMsgs {
 					encodeFileMsgs, _ := json.Marshal(oneFileMsgs)
 					file_max_ch <- 1
@@ -94,14 +95,13 @@ func sliceMsg(msg []Message, size int) (msgs [][]Message) {
 	cnt := 0
 	total := len(msg)
 	for idx, one := range msg {
+		childMsgs = append(childMsgs, one)
+		cnt++
 		if (cnt >= size || idx >= (total-1)) && (len(childMsgs) > 0) {
 			msgs = append(msgs, childMsgs)
 			childMsgs = childMsgs[0:0]
 			cnt = 0
-		} else {
-			childMsgs = append(childMsgs, one)
 		}
-		cnt++
 	}
 	return msgs
 }

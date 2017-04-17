@@ -18,10 +18,11 @@ type ServerInfo struct {
 }
 
 type ClientInfo struct {
-	Addr         string   `json:"addr"`
-	Paths        []Path   `json:"paths"`
-	SendChannels int      `json:"send_channels"`
-	ExcludeFiles []string `json:"exclude_files"`
+	Addr           string   `json:"addr"`
+	Paths          []Path   `json:"paths"`
+	SendChannels   int      `json:"send_channels"`
+	BatchSendFiles int      `json:"batch_send_files"`
+	ExcludeFiles   []string `json:"exclude_files"`
 }
 
 type Path struct {
