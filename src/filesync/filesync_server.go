@@ -16,9 +16,10 @@ import (
 )
 
 type Message struct {
-	MsgType int    `json:"msg_type"`
-	Data    string `json:"data"`
-	Path    string `json:"path"`
+	MsgType  int         `json:"msg_type"`
+	Data     string      `json:"data"`
+	Path     string      `json:"path"`
+	FileMode os.FileMode `json:"filemode"`
 }
 
 var (
@@ -77,18 +78,18 @@ func parseMsg(message Message) {
 		log.Println(path)
 		parentPath := filepath.Dir(path)
 
-		err := os.MkdirAll(parentPath, 0777)
+		err := os.MkdirAll(parentPath, message.FileMode)
 		if err != nil {
 			log.Println(err)
 		}
 
-		err = ioutil.WriteFile(path, bytes.NewBufferString(message.Data).Bytes(), 0777)
+		err = ioutil.WriteFile(path, bytes.NewBufferString(message.Data).Bytes(), message.FileMode)
 		if err != nil {
 			log.Println(err)
 		}
 	case 2:
 		path := strings.Replace(message.Path, "\\", "/", -1)
-		err := os.MkdirAll(path, 0777)
+		err := os.MkdirAll(path, message.FileMode)
 		if err != nil {
 			log.Println(err)
 		}

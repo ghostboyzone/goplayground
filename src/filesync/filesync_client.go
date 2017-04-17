@@ -19,9 +19,10 @@ import (
 )
 
 type Message struct {
-	MsgType int    `json:"msg_type"`
-	Data    string `json:"data"`
-	Path    string `json:"path"`
+	MsgType  int         `json:"msg_type"`
+	Data     string      `json:"data"`
+	Path     string      `json:"path"`
+	FileMode os.FileMode `json:"filemode"`
 }
 
 type tHashMap map[string]int64
@@ -58,12 +59,13 @@ func main() {
 	}
 }
 
-func prepareSend(localPath string, remotePath string, isDir bool) (msg Message) {
-	if isDir {
+func prepareSend(localPath string, remotePath string, info os.FileInfo) (msg Message) {
+	if info.IsDir() {
 		msg = Message{
-			MsgType: 2,
-			Data:    "",
-			Path:    remotePath,
+			MsgType:  2,
+			Data:     "",
+			Path:     remotePath,
+			FileMode: info.Mode(),
 		}
 	} else {
 		ff_bytes, _ := ioutil.ReadFile(localPath)
@@ -72,9 +74,10 @@ func prepareSend(localPath string, remotePath string, isDir bool) (msg Message) 
 		// _ = binary.Write(buf, binary.BigEndian, ff_bytes)
 		// log.Println(err)
 		msg = Message{
-			MsgType: 1,
-			Data:    string(ff_bytes),
-			Path:    remotePath,
+			MsgType:  1,
+			Data:     string(ff_bytes),
+			Path:     remotePath,
+			FileMode: info.Mode(),
 		}
 	}
 	return msg
@@ -113,7 +116,7 @@ func walkFuc(path string, info os.FileInfo, err error) error {
 		}
 		log.Println("new", "local: "+path, "remote: "+newPath)
 
-		sendMsg := prepareSend(path, newPath, info.IsDir())
+		sendMsg := prepareSend(path, newPath, info)
 		encode_msg, err := json.Marshal(sendMsg)
 
 		max_ch <- 1
@@ -127,7 +130,7 @@ func walkFuc(path string, info os.FileInfo, err error) error {
 			}
 			log.Println("update", "local: "+path, "remote: "+newPath)
 
-			sendMsg := prepareSend(path, newPath, info.IsDir())
+			sendMsg := prepareSend(path, newPath, info)
 			encode_msg, err := json.Marshal(sendMsg)
 
 			max_ch <- 1
