@@ -52,34 +52,64 @@ func main() {
 
 	for {
 		startTime := time.Now().Unix()
-		for tmpPath, tmpNewPath := range rMap {
-			log.Println("Start Process: [local]", tmpPath, ", [remote]", tmpNewPath)
+		isDirty := false
+		for tmpPath, _ := range rMap {
+			// log.Println("Start Process: [local]", tmpPath, ", [remote]", tmpNewPath)
 
 			dirMsgs = dirMsgs[0:0]
 			fileMsgs = fileMsgs[0:0]
 
+			if _, statErr := os.Stat(tmpPath); os.IsNotExist(statErr) {
+				log.Println("Path [", tmpPath, "] not exist, skipped!")
+				continue
+			}
+
 			_ = filepath.Walk(tmpPath, walkFuc)
 
 			if len(dirMsgs) > 0 {
+				isDirty = true
 				dir_max_ch <- 1
 				encodeDirMsgs, _ := json.Marshal(dirMsgs)
 				go sendToRemote(encodeDirMsgs, dir_max_ch)
 			}
 
 			if len(fileMsgs) > 0 {
+				isDirty = true
 				arrFileMsgs := sliceMsg(fileMsgs, parseConf.Client.BatchSendFiles)
-
 				for _, oneFileMsgs := range arrFileMsgs {
+					// log.Println("len", oneFileMsgs[0].Path)
 					encodeFileMsgs, _ := json.Marshal(oneFileMsgs)
 					file_max_ch <- 1
 					go sendToRemote(encodeFileMsgs, file_max_ch)
 				}
 			}
 
-			log.Println("Done Process: [local]", tmpPath, ", [remote]", tmpNewPath)
+			// if isDirty {
+			// log.Println("Done Process: [local]", tmpPath, ", [remote]", tmpNewPath)
+			// }
 		}
+
+		sleepTick := 0
+		leftChannels := 0
+		for {
+			nowLeftChannels := len(dir_max_ch) + len(file_max_ch)
+			if nowLeftChannels == 0 {
+				break
+			}
+			if sleepTick%40 == 0 {
+				if nowLeftChannels != leftChannels {
+					log.Println(len(dir_max_ch)+len(file_max_ch), "channels left, please wait...")
+					leftChannels = nowLeftChannels
+				}
+			}
+			time.Sleep(time.Millisecond * 50)
+			sleepTick++
+		}
+
 		endTime := time.Now().Unix()
-		log.Println("Cost: ", (endTime - startTime), "s, Sleep for next round")
+		if isDirty {
+			log.Println("Cost: ", (endTime - startTime), "s, Everything is now ready!")
+		}
 		time.Sleep(time.Second * 1)
 	}
 }
@@ -91,7 +121,8 @@ func main() {
  * @return {[type]}      [description]
  */
 func sliceMsg(msg []Message, size int) (msgs [][]Message) {
-	var childMsgs []Message
+	var childMsgs, childMsgsCopy []Message
+	childMsgsCopy = childMsgsCopy[0:0]
 	cnt := 0
 	total := len(msg)
 	for idx, one := range msg {
@@ -99,7 +130,7 @@ func sliceMsg(msg []Message, size int) (msgs [][]Message) {
 		cnt++
 		if (cnt >= size || idx >= (total-1)) && (len(childMsgs) > 0) {
 			msgs = append(msgs, childMsgs)
-			childMsgs = childMsgs[0:0]
+			childMsgs = childMsgsCopy
 			cnt = 0
 		}
 	}
@@ -113,20 +144,28 @@ func sliceMsg(msg []Message, size int) (msgs [][]Message) {
  * @return {[type]}            [description]
  */
 func sendToRemote(encode_msg []byte, max_ch chan int) {
-	u := url.URL{Scheme: "ws", Host: parseConf.Client.Addr, Path: "/echo"}
-	log.Printf("start connecting to %s", u.String())
-	var err error
-	conn, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
-	if err != nil {
-		log.Fatal("dial:", err)
-	}
-	defer conn.Close()
-	log.Printf("successful connected to %s", u.String())
+	for {
+		u := url.URL{Scheme: "ws", Host: parseConf.Client.Addr, Path: "/echo"}
+		// log.Printf("start connecting to %s", u.String())
+		var err error
+		conn, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
+		if err != nil {
+			log.Println("dial: ", err)
+			time.Sleep(20 * time.Millisecond)
+			continue
+		}
+		defer conn.Close()
+		// log.Printf("successful connected to %s", u.String())
 
-	err = conn.WriteMessage(websocket.BinaryMessage, encode_msg)
-	if err != nil {
-		log.Println("write error: ", err)
+		err = conn.WriteMessage(websocket.BinaryMessage, encode_msg)
+		if err != nil {
+			log.Println("write error: ", err)
+			time.Sleep(20 * time.Millisecond)
+			continue
+		}
+		break
 	}
+
 	<-max_ch
 }
 
@@ -148,7 +187,7 @@ func walkFuc(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			log.Fatal(err)
 		}
-		log.Println("new", "local: "+path, "remote: "+newPath)
+		log.Println("new file => ", "local: "+path, "remote: "+newPath)
 
 		prepareSend(path, newPath, info)
 	} else {
@@ -159,7 +198,7 @@ func walkFuc(path string, info os.FileInfo, err error) error {
 			if err != nil {
 				log.Fatal(err)
 			}
-			log.Println("update", "local: "+path, "remote: "+newPath)
+			log.Println("update file", "local: "+path, "remote: "+newPath)
 
 			prepareSend(path, newPath, info)
 		}
