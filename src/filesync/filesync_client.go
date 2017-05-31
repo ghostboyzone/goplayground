@@ -14,6 +14,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 	// "compress/gzip"
@@ -108,10 +109,22 @@ func main() {
 
 		endTime := time.Now().Unix()
 		if isDirty {
-			log.Println("Cost: ", (endTime - startTime), "s, Everything is now ready!")
+			tStr := formatTimeString(endTime - startTime)
+			log.Println("Cost: ", tStr, ", Everything is now ready!")
 		}
 		time.Sleep(time.Second * 1)
 	}
+}
+
+func formatTimeString(t int64) string {
+	formatStr := ""
+	minutes := int64(t / 60)
+	seconds := int64(t % 60)
+	if minutes > 0 {
+		formatStr += strconv.FormatInt(minutes, 10) + "min "
+	}
+	formatStr += strconv.FormatInt(seconds, 10) + "s"
+	return formatStr
 }
 
 /**
