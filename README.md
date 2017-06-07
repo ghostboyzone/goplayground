@@ -10,7 +10,7 @@ This's go playground, enjoy :)
 
 - [sort](./sort): Large data sorting algorithm
 
-- [webserver](./webserver)
+- [webserver](./webserver): Demo for http server
 
 - [imagedownloader](./imagedownloader): Download image urls
 
