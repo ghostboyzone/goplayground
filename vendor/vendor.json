@@ -101,6 +101,60 @@
 			"checksumSHA1": "hEnH6sgR83Qfx7UNnphNNlelmj0=",
 			"path": "github.com/gorilla/websocket",
 			"revision": ""
+		},
+		{
+			"checksumSHA1": "+RcTwqswcjEpErds31bZllnUGgI=",
+			"path": "github.com/juju/errors",
+			"revision": "8234c829496aaeae67c5c71235a2cbcc289e960a",
+			"revisionTime": "2017-05-09T13:42:57Z"
+		},
+		{
+			"checksumSHA1": "94Mvr/SU9I9Zl3pBtbHsBPN0LTg=",
+			"path": "github.com/ngaut/log",
+			"revision": "d2af3a61f64d093457fb23b25d20f4ce3cd551ce",
+			"revisionTime": "2017-03-07T01:10:05Z"
+		},
+		{
+			"checksumSHA1": "zmC8/3V4ls53DJlNTKDZwPSC/dA=",
+			"path": "github.com/satori/go.uuid",
+			"revision": "5bf94b69c6b68ee1b541973bb8e1144db23a194b",
+			"revisionTime": "2017-03-21T23:07:31Z"
+		},
+		{
+			"checksumSHA1": "8XLT0aC4U9/OA7Ws9AHWdZ6+ruA=",
+			"path": "github.com/siddontang/go-mysql/client",
+			"revision": "57c7e98d1ccb47c8601e19dc7714b59364dd456d",
+			"revisionTime": "2017-06-06T12:54:27Z"
+		},
+		{
+			"checksumSHA1": "l+KvmyijsXeOl8ZsR7eS35PCj/o=",
+			"path": "github.com/siddontang/go-mysql/mysql",
+			"revision": "57c7e98d1ccb47c8601e19dc7714b59364dd456d",
+			"revisionTime": "2017-06-06T12:54:27Z"
+		},
+		{
+			"checksumSHA1": "n/oG8QPPwsvSAimc/gCSuh5GaOQ=",
+			"path": "github.com/siddontang/go-mysql/packet",
+			"revision": "57c7e98d1ccb47c8601e19dc7714b59364dd456d",
+			"revisionTime": "2017-06-06T12:54:27Z"
+		},
+		{
+			"checksumSHA1": "ckr36nCk23fSW/9g5LGXrwXte+c=",
+			"path": "github.com/siddontang/go-mysql/replication",
+			"revision": "57c7e98d1ccb47c8601e19dc7714b59364dd456d",
+			"revisionTime": "2017-06-06T12:54:27Z"
+		},
+		{
+			"checksumSHA1": "hou29E6PZ7dEDFgXgM9P15cgHr4=",
+			"path": "github.com/siddontang/go/hack",
+			"revision": "cb568a3e5cc06256f91a2da5a87455f717eb33f4",
+			"revisionTime": "2017-05-17T07:08:08Z"
+		},
+		{
+			"checksumSHA1": "Y+HGqEkYM15ir+J93MEaHdyFy0c=",
+			"path": "golang.org/x/net/context",
+			"revision": "59a0b19b5533c7977ddeb86b017bf507ed407b12",
+			"revisionTime": "2017-06-03T08:13:02Z"
 		}
 	],
 	"rootPath": "github.com/ghostboyzone/goplayground"
