@@ -1,16 +1,25 @@
 # Go playground
+
 This's go playground, enjoy :) 
 
 ### Lists
 
-- cmdrunner
+- [cmdrunner](./cmdrunner): Run bash cmd
 
-- filesync
+- [filesync](./filesync): Filesync using websocket
 
-- sort
+- [sort](./sort): Large data sorting algorithm
 
-- webserver
+- [webserver](./webserver)
 
-- imagedownload
+- [imagedownloader](./imagedownloader): Download image urls
 
-- test
+- [translate](./translate): Translate languages using baidu api
+
+### Dev
+
+* we use [govendor](https://github.com/kardianos/govendor) to manage packages
+
+    * govendor add +external
+
+    * govendor install +local
