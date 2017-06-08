@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	myCh         chan int
+	// myCh         chan int
 	confPath     *string
 	confHost     *string
 	confPort     *string
@@ -21,9 +21,13 @@ var (
 	confPassword *string
 	confThread   *int
 	confDb       *string
+	sqlSucc      int64
+	sqlErr       int64
 )
 
 func main() {
+	sqlSucc = 0
+	sqlErr = 0
 	confPath = flag.String("path", "", "-path ./")
 	confHost = flag.String("h", "127.0.0.1", "-h 127.0.0.1")
 	confPort = flag.String("P", "3306", "-P 3306")
@@ -38,7 +42,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	myCh = make(chan int, *confThread)
+	myCh := make(chan int, *confThread)
 
 	var allPaths []string
 
@@ -62,7 +66,7 @@ func main() {
 
 		totalStr := ""
 
-		var sqlArr []string
+		// var sqlArr []string
 
 		for scanner.Scan() {
 			if len(totalStr) != 0 {
@@ -85,36 +89,47 @@ func main() {
 				if i == ";" {
 					if strings.Replace(totalStr, " ", "", -1) != ";" {
 						totalStr = strings.Replace(totalStr, "INSERT INTO", "INSERT IGNORE INTO", 1)
-						sqlArr = append(sqlArr, totalStr)
+						// sqlArr = append(sqlArr, totalStr)
+						myCh <- 1
+						inDb(totalStr, myCh)
 					}
 					totalStr = ""
 				}
 			}
+
+			// if len(sqlArr) >= 100 {
+			//     myCh <- 1
+			//     inDb(sqlArr, myCh)
+			//     sqlArr :=
+			// }
 		}
 
 		if len(totalStr) != 0 {
-			sqlArr = append(sqlArr, totalStr)
+			// sqlArr = append(sqlArr, totalStr)
+			myCh <- 1
+			inDb(totalStr, myCh)
 		}
 
-		log.Println(sqlArr)
+		// log.Println(sqlArr)
 
-		myCh <- 1
-		inDb(sqlArr, myCh)
+		// myCh <- 1
+		// inDb(sqlArr, myCh)
 	}
 
 }
 
-func inDb(sqls []string, ch chan int) {
+func inDb(sql string, ch chan int) {
 	conn, err := client.Connect(*confHost+":"+*confPort, *confUsername, *confPassword, *confDb)
 	if err != nil {
 		log.Panic(err)
 	}
 
-	for _, sql := range sqls {
-		_, err := conn.Execute(sql)
-		if err != nil {
-			log.Println("Err:", err, " Sql:", sql)
-		}
+	_, err = conn.Execute(sql)
+	if err != nil {
+		sqlErr++
+		log.Println("Err:", err, " Sql:", sql)
+	} else {
+		sqlSucc++
 	}
 
 	<-ch
