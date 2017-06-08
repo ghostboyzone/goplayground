@@ -58,13 +58,13 @@ func main() {
 
 	totalLoop := 0
 
+	reg, _ := regexp.Compile(`/\*.*\*/`)
+
 	for _, onePath := range allPaths {
 		log.Println(onePath)
 
 		f, _ := os.Open(onePath)
 		scanner := bufio.NewScanner(f)
-
-		reg, _ := regexp.Compile(`/\*.*\*/`)
 
 		totalStr := ""
 
@@ -96,12 +96,6 @@ func main() {
 						myCh <- 1
 						go inDb(totalStr, myCh)
 
-						totalLoop++
-
-						if totalLoop >= 1000 {
-							log.Println(sqlSucc, sqlErr)
-							totalLoop = 0
-						}
 					}
 					totalStr = ""
 				}
@@ -112,6 +106,12 @@ func main() {
 			//     inDb(sqlArr, myCh)
 			//     sqlArr :=
 			// }
+
+			totalLoop++
+			if totalLoop >= 1000 {
+				log.Println(sqlSucc, sqlErr)
+				totalLoop = 0
+			}
 		}
 
 		if len(totalStr) != 0 {
