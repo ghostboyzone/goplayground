@@ -56,6 +56,8 @@ func main() {
 		return nil
 	})
 
+	totalLoop := 0
+
 	for _, onePath := range allPaths {
 		log.Println(onePath)
 
@@ -88,10 +90,18 @@ func main() {
 				totalStr += i
 				if i == ";" {
 					if strings.Replace(totalStr, " ", "", -1) != ";" {
+
 						totalStr = strings.Replace(totalStr, "INSERT INTO", "INSERT IGNORE INTO", 1)
 						// sqlArr = append(sqlArr, totalStr)
 						myCh <- 1
-						inDb(totalStr, myCh)
+						go inDb(totalStr, myCh)
+
+						totalLoop++
+
+						if totalLoop >= 1000 {
+							log.Println(sqlSucc, sqlErr)
+							totalLoop = 0
+						}
 					}
 					totalStr = ""
 				}
