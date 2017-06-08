@@ -44,6 +44,7 @@ func main() {
 	}
 
 	myCh := make(chan int, *confThread)
+	myFileCh := make(chan int, 10)
 
 	var allPaths []string
 
@@ -64,75 +65,79 @@ func main() {
 	for _, onePath := range allPaths {
 		log.Println(onePath)
 
-		f, _ := os.Open(onePath)
-		scanner := bufio.NewScanner(f)
-
-		totalStr := ""
-
 		// var sqlArr []string
 
-		for scanner.Scan() {
-			if len(totalStr) != 0 {
-				totalStr += " "
-			}
+		myFileCh <- 1
 
-			lineStr := scanner.Text()
+		go func() {
+			f, _ := os.Open(onePath)
+			scanner := bufio.NewScanner(f)
 
-			lineStr = reg.ReplaceAllString(lineStr, "")
+			totalStr := ""
 
-			// skip blank line
-			if len(lineStr) == 0 {
-				continue
-			}
-
-			// log.Println(lineStr)
-
-			// strings.LastIndex(lineStr, ";")
-
-			totalStr += lineStr
-
-			if len(lineStr)-strings.LastIndex(lineStr, ";") == 1 {
-				totalStr = strings.Replace(totalStr, "INSERT INTO", "INSERT IGNORE INTO", 1)
-				myCh <- 1
-				go inDb(totalStr, myCh)
-				totalStr = ""
-			}
-
-			/*
-				for _, i := range strings.Split(lineStr, "") {
-					totalStr += i
-					if i == ";" {
-						if strings.Replace(totalStr, " ", "", -1) != ";" {
-
-							totalStr = strings.Replace(totalStr, "INSERT INTO", "INSERT IGNORE INTO", 1)
-							// sqlArr = append(sqlArr, totalStr)
-							myCh <- 1
-							go inDb(totalStr, myCh)
-
-						}
-						totalStr = ""
-					}
+			for scanner.Scan() {
+				if len(totalStr) != 0 {
+					totalStr += " "
 				}
-			*/
 
-			// if len(sqlArr) >= 100 {
-			//     myCh <- 1
-			//     inDb(sqlArr, myCh)
-			//     sqlArr :=
-			// }
+				lineStr := scanner.Text()
 
-			totalLoop++
-			if totalLoop >= 1000 {
-				log.Println(sqlSucc, sqlErr)
-				totalLoop = 0
+				lineStr = reg.ReplaceAllString(lineStr, "")
+
+				// skip blank line
+				if len(lineStr) == 0 {
+					continue
+				}
+
+				// log.Println(lineStr)
+
+				// strings.LastIndex(lineStr, ";")
+
+				totalStr += lineStr
+
+				if len(lineStr)-strings.LastIndex(lineStr, ";") == 1 {
+					totalStr = strings.Replace(totalStr, "INSERT INTO", "INSERT IGNORE INTO", 1)
+					myCh <- 1
+					go inDb(totalStr, myCh)
+					totalStr = ""
+				}
+
+				/*
+				   for _, i := range strings.Split(lineStr, "") {
+				       totalStr += i
+				       if i == ";" {
+				           if strings.Replace(totalStr, " ", "", -1) != ";" {
+
+				               totalStr = strings.Replace(totalStr, "INSERT INTO", "INSERT IGNORE INTO", 1)
+				               // sqlArr = append(sqlArr, totalStr)
+				               myCh <- 1
+				               go inDb(totalStr, myCh)
+
+				           }
+				           totalStr = ""
+				       }
+				   }
+				*/
+
+				// if len(sqlArr) >= 100 {
+				//     myCh <- 1
+				//     inDb(sqlArr, myCh)
+				//     sqlArr :=
+				// }
+
+				totalLoop++
+				if totalLoop >= 50000 {
+					log.Println(sqlSucc, sqlErr)
+					totalLoop = 0
+				}
 			}
-		}
 
-		if len(totalStr) != 0 {
-			// sqlArr = append(sqlArr, totalStr)
-			myCh <- 1
-			inDb(totalStr, myCh)
-		}
+			if len(totalStr) != 0 {
+				// sqlArr = append(sqlArr, totalStr)
+				myCh <- 1
+				inDb(totalStr, myCh)
+			}
+		}()
 
 		// log.Println(sqlArr)
 
