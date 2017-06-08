@@ -26,6 +26,7 @@ var (
 )
 
 func main() {
+
 	sqlSucc = 0
 	sqlErr = 0
 	confPath = flag.String("path", "", "-path ./")
@@ -86,20 +87,33 @@ func main() {
 
 			// log.Println(lineStr)
 
-			for _, i := range strings.Split(lineStr, "") {
-				totalStr += i
-				if i == ";" {
-					if strings.Replace(totalStr, " ", "", -1) != ";" {
+			// strings.LastIndex(lineStr, ";")
 
-						totalStr = strings.Replace(totalStr, "INSERT INTO", "INSERT IGNORE INTO", 1)
-						// sqlArr = append(sqlArr, totalStr)
-						myCh <- 1
-						go inDb(totalStr, myCh)
+			totalStr += lineStr
 
-					}
-					totalStr = ""
-				}
+			if len(lineStr)-strings.LastIndex(lineStr, ";") == 1 {
+				totalStr = strings.Replace(totalStr, "INSERT INTO", "INSERT IGNORE INTO", 1)
+				myCh <- 1
+				go inDb(totalStr, myCh)
+				totalStr = ""
 			}
+
+			/*
+				for _, i := range strings.Split(lineStr, "") {
+					totalStr += i
+					if i == ";" {
+						if strings.Replace(totalStr, " ", "", -1) != ";" {
+
+							totalStr = strings.Replace(totalStr, "INSERT INTO", "INSERT IGNORE INTO", 1)
+							// sqlArr = append(sqlArr, totalStr)
+							myCh <- 1
+							go inDb(totalStr, myCh)
+
+						}
+						totalStr = ""
+					}
+				}
+			*/
 
 			// if len(sqlArr) >= 100 {
 			//     myCh <- 1
