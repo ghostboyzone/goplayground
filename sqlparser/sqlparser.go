@@ -6,10 +6,12 @@ import (
 	"flag"
 	"github.com/siddontang/go-mysql/client"
 	"log"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 )
 
 var (
@@ -23,9 +25,11 @@ var (
 	confDb       *string
 	sqlSucc      int64
 	sqlErr       int64
+	connPools    []*client.Conn
 )
 
 func main() {
+	rand.Seed(time.Now().Unix())
 
 	sqlSucc = 0
 	sqlErr = 0
@@ -45,6 +49,8 @@ func main() {
 
 	myCh := make(chan int, *confThread)
 	myFileCh := make(chan int, 10)
+
+	initConnPools(20)
 
 	var allPaths []string
 
@@ -84,8 +90,10 @@ func main() {
 
 				lineStr = reg.ReplaceAllString(lineStr, "")
 
+				lineStrLen := len(lineStr)
+
 				// skip blank line
-				if len(lineStr) == 0 {
+				if lineStrLen == 0 {
 					continue
 				}
 
@@ -95,7 +103,7 @@ func main() {
 
 				totalStr += lineStr
 
-				if len(lineStr)-strings.LastIndex(lineStr, ";") == 1 {
+				if lineStrLen-strings.LastIndex(lineStr, ";") == 1 {
 					totalStr = strings.Replace(totalStr, "INSERT INTO", "INSERT IGNORE INTO", 1)
 					myCh <- 1
 					go inDb(totalStr, myCh)
@@ -126,7 +134,7 @@ func main() {
 				// }
 
 				totalLoop++
-				if totalLoop >= 50000 {
+				if totalLoop >= 100000 {
 					log.Println(sqlSucc, sqlErr)
 					totalLoop = 0
 				}
@@ -147,11 +155,23 @@ func main() {
 
 }
 
-func inDb(sql string, ch chan int) {
-	conn, err := client.Connect(*confHost+":"+*confPort, *confUsername, *confPassword, *confDb)
-	if err != nil {
-		log.Panic(err)
+func initConnPools(size int) {
+	for i := 0; i < size; i++ {
+		conn, err := client.Connect(*confHost+":"+*confPort, *confUsername, *confPassword, *confDb)
+		if err != nil {
+			log.Panic(err)
+		}
+		connPools = append(connPools, conn)
 	}
+}
+
+func getConnFromPool() *client.Conn {
+	size := len(connPools)
+	return connPools[rand.Intn(size)]
+}
+
+func inDb(sql string, ch chan int) {
+	conn := getConnFromPool()
 
 	_, err = conn.Execute(sql)
 	if err != nil {
