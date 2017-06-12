@@ -17,6 +17,7 @@ import (
 
 const (
 	BASE_API_URL = "http://www.jubi.com"
+	API_TRENDS   = "/coin/trends"
 	API_TICKER   = "/api/v1/ticker"
 	API_ALLCOIN  = "/coin/allcoin"
 )
@@ -31,6 +32,33 @@ func main() {
 	totalResult := getAllCoins()
 
 	nowT, _ := fmtdate.Parse("YYYY-MM-DD hh:mm:ss ZZ", "2017-06-12 00:00:00 +00:00")
+
+	/*
+		// cal now
+		currRate := float64(0)
+		currTotal := 0
+		for k, v := range totalResult {
+			coin, _ := getLatest(k)
+			currentPrice, _ := strconv.ParseFloat(coin.Last, 64)
+
+			log.Println(k, v[0], currentPrice)
+
+			resultMap := getFromJs(k)
+			nowTStr := nowT.In(time.UTC).Format("2006-01-02 15:04:05")
+			nowPrice := resultMap[nowTStr]
+
+			if nowPrice == 0 {
+				log.Println("Curr Skip:", k, v[0])
+				continue
+			}
+			nowRate := 100 * (currentPrice - nowPrice) / nowPrice
+			currRate += nowRate
+			currTotal++
+			log.Println(nowPrice, currTotal, nowRate)
+		}
+
+		log.Println("Curr: ", currRate/float64(currTotal), currTotal)
+	*/
 
 	totalRound := 20
 	for i := 1; i <= totalRound; i++ {
@@ -71,7 +99,7 @@ func initReg() {
 }
 
 func getTrends() resultJson.CoinHashes {
-	reqUrl := "https://www.jubi.com/coin/trends"
+	reqUrl := BASE_API_URL + API_TRENDS
 	resp, err := http.Get(reqUrl)
 	if err != nil {
 		log.Println(err)
