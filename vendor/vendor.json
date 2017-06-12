@@ -109,6 +109,12 @@
 			"revisionTime": "2017-05-09T13:42:57Z"
 		},
 		{
+			"checksumSHA1": "z5uTmZnw3tabpnwpkiBxA4E6kDw=",
+			"path": "github.com/metakeule/fmtdate",
+			"revision": "427373e7d2f8fcaa70a83e289c15fb3618a945bc",
+			"revisionTime": "2015-05-02T21:23:23Z"
+		},
+		{
 			"checksumSHA1": "94Mvr/SU9I9Zl3pBtbHsBPN0LTg=",
 			"path": "github.com/ngaut/log",
 			"revision": "d2af3a61f64d093457fb23b25d20f4ce3cd551ce",

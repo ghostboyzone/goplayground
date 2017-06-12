@@ -23,3 +23,5 @@ This's go playground, enjoy :)
     * govendor add +external
 
     * govendor install +local
+
+    * govendor fetch `your_package_name`
