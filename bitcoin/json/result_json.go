@@ -1,14 +1,15 @@
 package json
 
+import (
+	"fmt"
+)
+
 type CoinTrends struct {
 	Data   []DataArr `json:"data"`
 	Yprice float64   `json:"yprice"`
 }
 type DataArr [2]float64
 type CoinHashes map[string]CoinTrends
-
-type CoinAllHashes map[string]CoinAllHashesDetail
-type CoinAllHashesDetail []interface{}
 
 type CoinLatest struct {
 	High   string  `json:"high"`
@@ -18,6 +19,10 @@ type CoinLatest struct {
 	Last   string  `json:"last"`
 	Vol    float64 `json:"vol"`
 	Volume float64 `json:"volume"`
+}
+
+func (c CoinLatest) String() string {
+	return fmt.Sprintf("High[%s] Low[%s] Buy[%s] Sell[%s] Last[%s] Vol[%s] Volume[%s]", c.High, c.Low, c.Buy, c.Sell, c.Last, c.Vol, c.Volume)
 }
 
 type CoinJs struct {

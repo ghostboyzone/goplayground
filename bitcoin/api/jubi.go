@@ -4,60 +4,95 @@ import (
 	"crypto/hmac"
 	"crypto/md5"
 	"crypto/sha256"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 )
 
-/*
- usage: first fulfill the public key and secret key, visit: https://www.jubi.com/help/api.html
-*/
-
-const (
-	API_URL    = "http://www.jubi.com/api/v1/"
-	PUBLIC_KEY = "YOUR PUBLIC KEY"
-	SECRET_KEY = "YOUR SECRET KEY"
-)
-
-func TradeList(coinName string) {
+/**
+ * 挂单查询
+ * https://www.jubi.com/help/api.html#three-six
+ */
+func TradeList(coinName string) []map[string]interface{} {
 	v := getCommonParams(coinName)
 	v.Add("type", "all")
 	v.Add("since", "0")
-	log.Println(req("trade_list", v))
+	var data []map[string]interface{}
+	decoder := json.NewDecoder(strings.NewReader(req("trade_list", v)))
+	decoder.Decode(&data)
+	return data
 }
 
-func TradeView(coinName string, id string) {
+/**
+ * 查询订单信息
+ * https://www.jubi.com/help/api.html#three-seven
+ */
+func TradeView(coinName string, id string) map[string]interface{} {
 	v := getCommonParams(coinName)
 	v.Add("id", id)
-	log.Println(req("trade_view", v))
+	var data map[string]interface{}
+	decoder := json.NewDecoder(strings.NewReader(req("trade_view", v)))
+	decoder.Decode(&data)
+	return data
 }
 
-func TradeCancel(coinName string, id string) {
+/**
+ * 取消订单
+ * https://www.jubi.com/help/api.html#three-eight
+ */
+func TradeCancel(coinName string, id string) map[string]interface{} {
 	v := getCommonParams(coinName)
 	v.Add("id", id)
-	log.Println(req("trade_cancel", v))
+	var data map[string]interface{}
+	decoder := json.NewDecoder(strings.NewReader(req("trade_cancel", v)))
+	decoder.Decode(&data)
+	return data
 }
 
-func TradeAdd(coinName string, amount string, price string, type1 string) {
+/**
+ * 下单
+ * @param type1: buy or sell
+ * https://www.jubi.com/help/api.html#three-nine
+ */
+func TradeAdd(coinName string, amount string, price string, type1 string) map[string]interface{} {
 	v := getCommonParams(coinName)
 	v.Add("amount", amount)
 	v.Add("price", price)
 	v.Add("type", type1)
-	log.Println(req("trade_add", v))
+	var data map[string]interface{}
+	decoder := json.NewDecoder(strings.NewReader(req("trade_add", v)))
+	decoder.Decode(&data)
+	return data
 }
 
-func Balance(coinName string) {
+/**
+ * 账户信息
+ * https://www.jubi.com/help/api.html#three-four
+ */
+func Balance(coinName string) map[string]interface{} {
 	v := getCommonParams(coinName)
-	log.Println(req("balance", v))
+	var data map[string]interface{}
+	decoder := json.NewDecoder(strings.NewReader(req("balance", v)))
+	decoder.Decode(&data)
+	return data
 }
 
-func Wallet(coinName string) {
+/**
+ * 比特币充值地址
+ * https://www.jubi.com/help/api.html#three-five
+ */
+func Wallet(coinName string) map[string]interface{} {
 	v := getCommonParams(coinName)
-	log.Println(req("wallet", v))
+	var data map[string]interface{}
+	decoder := json.NewDecoder(strings.NewReader(req("wallet", v)))
+	decoder.Decode(&data)
+	return data
 }
 
 func getCommonParams(coinName string) url.Values {
