@@ -2,6 +2,8 @@ package http
 
 import (
 	// "errors"
+	// "bytes"
+	"io"
 	"net/http"
 )
 
@@ -11,15 +13,15 @@ type Client struct {
 	Client  *http.Client
 }
 
-func NewClient(method string, urlStr string) (client *Client, err error) {
-	req, err := http.NewRequest(method, urlStr, nil)
+func NewClient(method string, urlStr string, body io.Reader) (client *Client, err error) {
+	req, err := http.NewRequest(method, urlStr, body)
 
 	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/59.0.3071.86 Safari/537.36")
 	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
-	req.Header.Set("Accept-Charset", "GBK,utf-8;q=0.7,*;q=0.3")
-	req.Header.Set("Accept-Encoding", "gzip,deflate,sdch")
-	req.Header.Set("Accept-Language", "zh-CN,zh;q=0.8")
-	req.Header.Set("Cache-Control", "max-age=0")
+	// req.Header.Set("Accept-Charset", "GBK,utf-8;q=0.7,*;q=0.3")
+	// req.Header.Set("Accept-Encoding", "gzip,deflate,sdch")
+	// req.Header.Set("Accept-Language", "zh-CN,zh;q=0.8")
+	// req.Header.Set("Cache-Control", "max-age=0")
 	req.Header.Set("Connection", "keep-alive")
 
 	return &Client{
@@ -27,6 +29,11 @@ func NewClient(method string, urlStr string) (client *Client, err error) {
 		Request: req,
 		Client:  &http.Client{},
 	}, err
+}
+
+func (c *Client) SetHeader(key string, value string) *Client {
+	c.Request.Header.Set(key, value)
+	return c
 }
 
 func (c *Client) SetUserAgent(ua string) *Client {

@@ -1,12 +1,14 @@
 package api
 
 import (
+	"encoding/json"
 	"encoding/xml"
 	"errors"
 	"fmt"
 	myHttp "github.com/ghostboyzone/goplayground/wechat/http"
 	"github.com/skratchdot/open-golang/open"
-	"io"
+	// "io"
+	"bytes"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -14,6 +16,7 @@ import (
 	"os"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -33,6 +36,20 @@ type Wechat struct {
 	QrImgName   string
 	RedirectUri string
 	// Client  myHttp
+	Auth AuthInfo
+}
+
+type AuthInfo struct {
+	XMLName    xml.Name  `xml:"error" json:"-"`
+	Ret        int       `xml:"ret" json:"-"`
+	Message    string    `xml:"message" json:"-"`
+	Skey       string    `xml:"skey" json:"Skey"`
+	Wxsid      string    `xml:"wxsid" json:"Sid"`
+	Wxuin      int64     `xml:"wxuin" json:"Uin"`
+	PassTicket string    `xml:"pass_ticket" json:"-"`
+	DeviceId   string    `xml:"-" json:"DeviceId"`
+	UserName   string    `xml:"-" json:"UserName"`
+	SyncKey    WxSyncKey `xml:"-" json:"SyncKey"`
 }
 
 func NewWechat() *Wechat {
@@ -46,7 +63,12 @@ func NewWechat() *Wechat {
 		Uuid:        uUid,
 		QrImgName:   "qrcode.jpg",
 		RedirectUri: "",
+		Auth:        AuthInfo{},
 	}
+}
+
+func (we *Wechat) isLogin() bool {
+	return len(we.Auth.PassTicket) != 0
 }
 
 func getUuid() (uUid string, err error) {
@@ -58,7 +80,7 @@ func getUuid() (uUid string, err error) {
 	v.Add("_", fmt.Sprintf("%d", time.Now().UnixNano()/1e6))
 	urlStr := "https://login.wx.qq.com/jslogin" + "?" + v.Encode()
 
-	client, _ := myHttp.NewClient(http.MethodGet, urlStr)
+	client, _ := myHttp.NewClient(http.MethodGet, urlStr, nil)
 	resp, _ := client.Do()
 
 	if resp.StatusCode == 200 {
@@ -79,7 +101,7 @@ func getUuid() (uUid string, err error) {
 }
 
 func (we *Wechat) ShowQrCode() {
-	if we.RedirectUri != "" {
+	if we.isLogin() {
 		return
 	}
 	imgUrl := "https://login.weixin.qq.com/qrcode/" + we.Uuid
@@ -113,7 +135,7 @@ func downloadImg(imgUrl string, imgName string) error {
 }
 
 func (we *Wechat) WaitForScan() {
-	if we.RedirectUri != "" {
+	if we.isLogin() {
 		return
 	}
 	for {
@@ -126,7 +148,10 @@ func (we *Wechat) WaitForScan() {
 			log.Println("Scanned, wait for confirm")
 		} else if data["code"] == "200" {
 			log.Println("Done", data["redirect_uri"])
-			we.RedirectUri = data["redirect_uri"]
+			we.RedirectUri = data["redirect_uri"] + "&fun=new"
+			break
+		} else if data["code"] == "408" {
+			log.Fatal("Timeout, quit")
 			break
 		} else {
 			log.Println(data)
@@ -134,29 +159,210 @@ func (we *Wechat) WaitForScan() {
 	}
 }
 
-type BaseRequest struct {
-	XMLName    xml.Name `xml:"error" json:"-"`
-	Ret        int      `xml:"ret" json:"-"`
-	Message    string   `xml:"message" json:"-"`
-	Skey       string   `xml:"skey" json:"Skey"`
-	Wxsid      string   `xml:"wxsid" json:"Sid"`
-	Wxuin      int64    `xml:"wxuin" json:"Uin"`
-	PassTicket string   `xml:"pass_ticket" json:"-"`
-	DeviceID   string   `xml:"-" json:"DeviceID"`
+func (we *Wechat) GetAuthInfo() {
+	if we.isLogin() {
+		return
+	}
+	client, _ := myHttp.NewClient(http.MethodGet, we.RedirectUri, nil)
+	resp, err := client.Do()
+	if err != nil {
+		log.Fatal("get info err:", err)
+	}
+	if resp.StatusCode == 200 {
+		body, _ := ioutil.ReadAll(resp.Body)
+		bodyStr := string(body)
+		log.Println("authStr:", bodyStr)
+		var auth AuthInfo
+		xml.Unmarshal([]byte(bodyStr), &auth)
+		we.Auth = auth
+	} else {
+		log.Fatal("get info err, status:", resp.StatusCode)
+	}
 }
 
-func (we *Wechat) GetInfo() {
-	client, _ := myHttp.NewClient(http.MethodGet, we.RedirectUri)
-	resp, err := client.Do()
-	log.Println(err)
-	if resp.StatusCode == 200 {
-		// body, _ := ioutil.ReadAll(resp.Body)
-		// bodyStr := string(body)
-		// log.Println(resp.Header, resp.Re)
+func (we *Wechat) SetAuthInfo() {
+	authStr := ``
+	var auth AuthInfo
+	xml.Unmarshal([]byte(authStr), &auth)
+	we.Auth = auth
+}
 
-		var aa BaseRequest
-		xml.NewDecoder(resp.Body.(io.Reader)).Decode(aa)
-		log.Println(aa.Skey)
+type SMessage struct {
+	BaseRequest SMessageBaseRequest `json:"BaseRequest"`
+	Msg         SMessageMsg         `json:"Msg"`
+	Scene       int                 `json:"Scene"`
+}
+type SMessageInit struct {
+	BaseRequest SMessageBaseRequest `json:"BaseRequest"`
+}
+type SMessageSync struct {
+	BaseRequest SMessageBaseRequest `json:"BaseRequest"`
+	SyncKey     WxSyncKey           `json:"SyncKey"`
+	rr          int64               `json:"rr"`
+}
+type SMessageBaseRequest struct {
+	Uin      int64  `json:"Uin"`
+	Sid      string `json:"Sid"`
+	Skey     string `json:"Skey"`
+	DeviceID string `json:"DeviceID"`
+}
+type SMessageMsg struct {
+	Type         int    `json:"Type"`
+	Content      string `json:"Content"`
+	FromUserName string `json:"FromUserName"`
+	ToUserName   string `json:"ToUserName"`
+	LocalID      string `json:"LocalID"`
+	ClientMsgId  string `json:"ClientMsgId"`
+}
+
+type WxInitMessage struct {
+	BaseResponse map[string]interface{} `json:"BaseResponse"`
+	Count        int
+	ContactList  [](map[string]interface{}) `json:"ContactList"`
+	SyncKey      WxSyncKey                  `json:"SyncKey"`
+	User         map[string]interface{}     `json:"User"`
+}
+
+type WxSyncKey struct {
+	Count int                        `json:"Count"`
+	List  [](map[string]interface{}) `json:"List"`
+}
+
+func (we *Wechat) WebWxInit() {
+	we.Auth.DeviceId = "e679570618634105123"
+
+	urlStr := "https://wx.qq.com/cgi-bin/mmwebwx-bin/webwxinit"
+	v := url.Values{}
+	v.Set("lang", "zh_CN")
+	v.Set("pass_ticket", we.Auth.PassTicket)
+	urlStr += "?" + v.Encode()
+
+	a := SMessageBaseRequest{
+		Uin:      we.Auth.Wxuin,
+		Sid:      we.Auth.Wxsid,
+		Skey:     we.Auth.Skey,
+		DeviceID: we.Auth.DeviceId,
+	}
+
+	b := SMessageInit{
+		BaseRequest: a,
+	}
+
+	c, _ := json.Marshal(b)
+
+	aaa := string(c)
+
+	// log.Println(aaa)
+	client, _ := myHttp.NewClient(http.MethodPost, urlStr, bytes.NewBufferString(aaa))
+	client.SetHeader("ContentType", "application/json; charset=UTF-8")
+	resp, err := client.Do()
+	if err != nil {
+		log.Fatal("get info err:", err)
+	}
+
+	if resp.StatusCode == 200 {
+		body, _ := ioutil.ReadAll(resp.Body)
+		bodyStr := string(body)
+		// log.Println(bodyStr)
+
+		var ttt WxInitMessage
+
+		decoder := json.NewDecoder(strings.NewReader(bodyStr))
+		decoder.Decode(&ttt)
+
+		log.Println(ttt.User, ttt.SyncKey)
+
+		eee, _ := json.Marshal(ttt.SyncKey)
+
+		log.Println(string(eee))
+
+		we.Auth.UserName = ttt.User["UserName"].(string)
+		we.Auth.SyncKey = ttt.SyncKey
+
+	} else {
+		log.Fatal("send msg err, status:", resp.StatusCode)
+	}
+}
+
+func (we *Wechat) WebWxSync() {
+	urlStr := "https://wx.qq.com/cgi-bin/mmwebwx-bin/webwxsync"
+	v := url.Values{}
+	v.Set("sid", we.Auth.Wxsid)
+	v.Set("skey", we.Auth.Skey)
+	v.Set("pass_ticket", we.Auth.PassTicket)
+	urlStr += "?" + v.Encode()
+
+	a := SMessageBaseRequest{
+		Uin:      we.Auth.Wxuin,
+		Sid:      we.Auth.Wxsid,
+		Skey:     we.Auth.Skey,
+		DeviceID: we.Auth.DeviceId,
+	}
+
+	b := SMessageSync{
+		BaseRequest: a,
+		SyncKey:     we.Auth.SyncKey,
+		rr:          time.Now().Unix(),
+	}
+
+	c, _ := json.Marshal(b)
+
+	aaa := string(c)
+	client, _ := myHttp.NewClient(http.MethodPost, urlStr, bytes.NewBufferString(aaa))
+	client.SetHeader("ContentType", "application/json; charset=UTF-8")
+	resp, err := client.Do()
+	if err != nil {
+		log.Fatal("get info err:", err)
+	}
+
+	if resp.StatusCode == 200 {
+		body, _ := ioutil.ReadAll(resp.Body)
+		_ = string(body)
+		// log.Println(bodyStr)
+		log.Println("Sync success")
+	} else {
+		log.Fatal("sync msg err, status:", resp.StatusCode)
+	}
+}
+
+func (we *Wechat) SendMsg(msgStr string) {
+	a := SMessageBaseRequest{
+		Uin:      we.Auth.Wxuin,
+		Sid:      we.Auth.Wxsid,
+		Skey:     we.Auth.Skey,
+		DeviceID: we.Auth.DeviceId,
+	}
+	ttt := fmt.Sprintf("%d", time.Now().UnixNano()/1e5)
+	b := SMessageMsg{
+		Type:         1,
+		Content:      msgStr,
+		FromUserName: we.Auth.UserName,
+		ToUserName:   "filehelper",
+		LocalID:      ttt,
+		ClientMsgId:  ttt,
+	}
+	c := SMessage{
+		BaseRequest: a,
+		Msg:         b,
+		Scene:       0,
+	}
+
+	d, _ := json.Marshal(c)
+
+	aaa := string(d)
+	client, _ := myHttp.NewClient(http.MethodPost, "https://wx.qq.com/cgi-bin/mmwebwx-bin/webwxsendmsg?pass_ticket="+we.Auth.PassTicket, bytes.NewBufferString(aaa))
+	client.SetHeader("ContentType", "application/json; charset=UTF-8")
+	resp, err := client.Do()
+	if err != nil {
+		log.Fatal("get info err:", err)
+	}
+
+	if resp.StatusCode == 200 {
+		body, _ := ioutil.ReadAll(resp.Body)
+		bodyStr := string(body)
+		log.Println(bodyStr)
+	} else {
+		log.Fatal("send msg err, status:", resp.StatusCode)
 	}
 }
 
