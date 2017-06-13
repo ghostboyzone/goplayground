@@ -157,6 +157,12 @@
 			"revisionTime": "2017-05-17T07:08:08Z"
 		},
 		{
+			"checksumSHA1": "BbN4B9BNMlpGIASsSK8pT9jOhlI=",
+			"path": "github.com/skratchdot/open-golang/open",
+			"revision": "75fb7ed4208cf72d323d7d02fd1a5964a7a9073c",
+			"revisionTime": "2016-03-02T14:40:31Z"
+		},
+		{
 			"checksumSHA1": "Y+HGqEkYM15ir+J93MEaHdyFy0c=",
 			"path": "golang.org/x/net/context",
 			"revision": "59a0b19b5533c7977ddeb86b017bf507ed407b12",
