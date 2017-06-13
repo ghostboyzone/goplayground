@@ -2,9 +2,10 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 	resultJson "github.com/ghostboyzone/goplayground/bitcoin/json"
 	"io/ioutil"
-	"log"
+	// "log"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -91,12 +92,27 @@ func KData(coinName string) resultJson.CoinJs {
 	return data
 }
 
+/**
+ * 加强版K线图
+ * @param  coinName string        币名称，如: btc
+ * @param  unit     string        时间间隔单位，如: 5m、15m、30m、1h、8h、1d
+ * @return          [description]
+ */
+func AdvanceKData(coinName string, unit string) [][]interface{} {
+	v := url.Values{}
+	respStr := reqPublic(fmt.Sprintf("/coin/%s/k_%s.json", coinName, unit), v)
+	var data [][]interface{}
+	decoder := json.NewDecoder(strings.NewReader(respStr))
+	decoder.Decode(&data)
+	return data
+}
+
 func reqPublic(api string, v url.Values) string {
 	reqUrl := BASE_API_URL + api
 	if len(v) != 0 {
 		reqUrl += "?" + v.Encode()
 	}
-	log.Println("req_public", reqUrl)
+	// log.Println("req_public", reqUrl)
 	resp, _ := http.Get(reqUrl)
 	defer resp.Body.Close()
 	body, _ := ioutil.ReadAll(resp.Body)

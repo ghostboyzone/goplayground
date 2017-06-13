@@ -10,17 +10,10 @@ import (
 	"time"
 )
 
-const (
-	BASE_API_URL = "http://www.jubi.com"
-	API_TRENDS   = "/coin/trends"
-	API_TICKER   = "/api/v1/ticker"
-	API_ALLCOIN  = "/coin/allcoin"
-)
-
 func main() {
 	totalResult := apiReq.AllCoin()
 
-	nowT, _ := fmtdate.Parse("YYYY-MM-DD hh:mm:ss ZZ", "2017-06-12 00:00:00 +00:00")
+	nowT, _ := fmtdate.Parse("YYYY-MM-DD hh:mm:ss ZZ", "2017-06-13 00:00:00 +00:00")
 
 	totalRound := 20
 	for i := 1; i <= totalRound; i++ {
@@ -35,7 +28,7 @@ func main() {
 		rate := float64(0)
 		total := 0
 		for k, v := range totalResult {
-			resultMap := getFromJs(k)
+			resultMap := getKDataMap(k)
 
 			nowPrice := resultMap[nowTStr]
 
@@ -45,7 +38,7 @@ func main() {
 				log.Println("Skip:", k, v[0])
 				continue
 			}
-			nowRate := 100 * (nowPrice - beforePrice) / beforePrice
+			nowRate := (nowPrice - beforePrice) / beforePrice
 
 			rate += nowRate
 			total++
@@ -56,10 +49,10 @@ func main() {
 	}
 }
 
-func getFromJs(coinName string) (result map[string]float64) {
+func getKDataMap(coinName string) (result map[string]float64) {
 	result = make(map[string]float64)
-	myCoinJs := apiReq.KData(coinName)
-	for _, i := range myCoinJs.TimeLine.OneD {
+	myCoinJs := apiReq.AdvanceKData(coinName, "1d")
+	for _, i := range myCoinJs {
 		timestamp := int64(i[0].(float64) / 1000)
 		timestamp_format := time.Unix(timestamp, 0).In(time.UTC).Format("2006-01-02 15:04:05")
 		price, _ := strconv.ParseFloat(i[2].(string), 64)

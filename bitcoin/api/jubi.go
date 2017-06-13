@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
+	// "log"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -107,7 +107,7 @@ func getCommonParams(coinName string) url.Values {
 func req(api string, v url.Values) string {
 	v.Add("signature", sha256Sum2(v.Encode()))
 	reqUrl := API_URL + api
-	log.Println("req", reqUrl, v.Encode())
+	// log.Println("req", reqUrl, v.Encode())
 	resp, _ := http.PostForm(reqUrl, v)
 	defer resp.Body.Close()
 	body, _ := ioutil.ReadAll(resp.Body)
