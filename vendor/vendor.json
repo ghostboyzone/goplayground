@@ -3,6 +3,12 @@
 	"ignore": "test",
 	"package": [
 		{
+			"checksumSHA1": "2WnYlVmvEofhdz51T54uaOe+1CU=",
+			"path": "github.com/boltdb/bolt",
+			"revision": "e9cf4fae01b5a8ff89d0ec6b32f0d9c9f79aefdd",
+			"revisionTime": "2017-01-31T19:20:18Z"
+		},
+		{
 			"checksumSHA1": "RRuRU1gXrOxRttCtaGXwJVAaq1A=",
 			"path": "github.com/emicklei/proto",
 			"revision": ""
@@ -167,6 +173,10 @@
 			"path": "golang.org/x/net/context",
 			"revision": "59a0b19b5533c7977ddeb86b017bf507ed407b12",
 			"revisionTime": "2017-06-03T08:13:02Z"
+		},
+		{
+			"path": "golang.org/x/sys/unix",
+			"revision": ""
 		}
 	],
 	"rootPath": "github.com/ghostboyzone/goplayground"

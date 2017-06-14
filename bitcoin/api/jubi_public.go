@@ -94,6 +94,7 @@ func KData(coinName string) resultJson.CoinJs {
 
 /**
  * 加强版K线图
+ * https://www.jubi.com/coin/doge/k_5m.json
  * @param  coinName string        币名称，如: btc
  * @param  unit     string        时间间隔单位，如: 5m、15m、30m、1h、8h、1d
  * @return          [description]
