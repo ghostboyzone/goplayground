@@ -26,51 +26,34 @@ var (
 	loginRedirectUriReg *regexp.Regexp
 )
 
-const (
-	APP_ID = "wx782c26e4c19acffb"
-)
-
-type Wechat struct {
-	AppId       string
-	Uuid        string
-	QrImgName   string
-	RedirectUri string
-	// Client  myHttp
-	Auth AuthInfo
-}
-
-type AuthInfo struct {
-	XMLName    xml.Name  `xml:"error" json:"-"`
-	Ret        int       `xml:"ret" json:"-"`
-	Message    string    `xml:"message" json:"-"`
-	Skey       string    `xml:"skey" json:"Skey"`
-	Wxsid      string    `xml:"wxsid" json:"Sid"`
-	Wxuin      int64     `xml:"wxuin" json:"Uin"`
-	PassTicket string    `xml:"pass_ticket" json:"-"`
-	DeviceId   string    `xml:"-" json:"DeviceId"`
-	UserName   string    `xml:"-" json:"UserName"`
-	SyncKey    WxSyncKey `xml:"-" json:"SyncKey"`
-}
-
+/**
+ * 初始化wchat实例
+ */
 func NewWechat() *Wechat {
 	uUid, err := getUuid()
 	if err != nil {
 		log.Fatal("get uuid failed: ", err)
 	}
 
-	return &Wechat{
+	we := &Wechat{
 		AppId:       APP_ID,
 		Uuid:        uUid,
 		QrImgName:   "qrcode.jpg",
 		RedirectUri: "",
 		Auth:        AuthInfo{},
+		IsLogin:     false,
 	}
+
+	authStr := we.readAuthInfoFromFile()
+	if len(authStr) > 0 {
+		we.SetAuthInfo(authStr)
+	}
+	return we
 }
 
-func (we *Wechat) isLogin() bool {
-	return len(we.Auth.PassTicket) != 0
-}
-
+/**
+ * 获取uuid
+ */
 func getUuid() (uUid string, err error) {
 	v := url.Values{}
 	v.Add("appid", APP_ID)
@@ -100,6 +83,9 @@ func getUuid() (uUid string, err error) {
 	return uUid, errors.New("get uuid error, status code:" + string(resp.StatusCode))
 }
 
+/**
+ * 显示登录二维码
+ */
 func (we *Wechat) ShowQrCode() {
 	if we.isLogin() {
 		return
@@ -115,6 +101,9 @@ func (we *Wechat) ShowQrCode() {
 	defer os.Remove(we.QrImgName)
 }
 
+/**
+ * 下载二维码图片
+ */
 func downloadImg(imgUrl string, imgName string) error {
 	httpResp, _ := http.Get(imgUrl)
 	defer httpResp.Body.Close()
@@ -134,6 +123,9 @@ func downloadImg(imgUrl string, imgName string) error {
 	return nil
 }
 
+/**
+ * 扫码回调
+ */
 func (we *Wechat) WaitForScan() {
 	if we.isLogin() {
 		return
@@ -149,6 +141,8 @@ func (we *Wechat) WaitForScan() {
 		} else if data["code"] == "200" {
 			log.Println("Done", data["redirect_uri"])
 			we.RedirectUri = data["redirect_uri"] + "&fun=new"
+			// 获取授权信息
+			we.GetAuthInfo()
 			break
 		} else if data["code"] == "408" {
 			log.Fatal("Timeout, quit")
@@ -159,6 +153,44 @@ func (we *Wechat) WaitForScan() {
 	}
 }
 
+/**
+ * 扫码结果查询（轮询）
+ */
+func getLoginStatus(uUid string) (retData map[string]string, err error) {
+	retData = make(map[string]string)
+	v := url.Values{}
+	v.Set("loginicon", "true")
+	v.Set("uuid", uUid)
+	v.Set("tip", "0")
+	v.Set("_", fmt.Sprintf("%d", time.Now().UnixNano()/1e6))
+	reqUrl := "https://login.wx.qq.com/cgi-bin/mmwebwx-bin/login" + "?" + v.Encode()
+	resp, _ := http.Get(reqUrl)
+	defer resp.Body.Close()
+	body, _ := ioutil.ReadAll(resp.Body)
+	bodyStr := string(body)
+	loginCodeData := loginCodeReg.FindStringSubmatch(bodyStr)
+	if len(loginCodeData) == 0 {
+		return retData, errors.New("get code failed")
+	}
+
+	retData["code"] = loginCodeData[1]
+	switch loginCodeData[1] {
+	case "201":
+		return retData, nil
+	case "200":
+		loginRedirectUrlData := loginRedirectUriReg.FindStringSubmatch(bodyStr)
+		if len(loginRedirectUrlData) == 0 {
+			return retData, errors.New("get redirect uri failed")
+		}
+		retData["redirect_uri"] = loginRedirectUrlData[1]
+		return retData, nil
+	}
+	return retData, nil
+}
+
+/**
+ * 获取授权信息
+ */
 func (we *Wechat) GetAuthInfo() {
 	if we.isLogin() {
 		return
@@ -172,64 +204,49 @@ func (we *Wechat) GetAuthInfo() {
 		body, _ := ioutil.ReadAll(resp.Body)
 		bodyStr := string(body)
 		log.Println("authStr:", bodyStr)
-		var auth AuthInfo
-		xml.Unmarshal([]byte(bodyStr), &auth)
-		we.Auth = auth
+		we.SetAuthInfo(bodyStr)
+		we.WebWxInit()
+		we.writeAuthInfoToFile(bodyStr)
 	} else {
 		log.Fatal("get info err, status:", resp.StatusCode)
 	}
 }
 
-func (we *Wechat) SetAuthInfo() {
-	authStr := ``
+func (we *Wechat) writeAuthInfoToFile(authStr string) {
+	fp, err := os.OpenFile(TMP_AUTH_FILE, os.O_CREATE|os.O_WRONLY, 0600)
+	defer fp.Close()
+	if err != nil {
+		log.Println("Write auth info failed: create file failed")
+		return
+	}
+	fp.WriteString(authStr)
+	return
+}
+func (we *Wechat) readAuthInfoFromFile() string {
+	fp, err := os.Open(TMP_AUTH_FILE)
+	if err != nil {
+		log.Println("Cannot find previous auth info, start to call login")
+		return ""
+	}
+	body, _ := ioutil.ReadAll(fp)
+	log.Println("Read auth info:", string(body))
+	return string(body)
+}
+
+/**
+ * 设置授权信息
+ */
+func (we *Wechat) SetAuthInfo(authStr string) {
 	var auth AuthInfo
 	xml.Unmarshal([]byte(authStr), &auth)
 	we.Auth = auth
 }
 
-type SMessage struct {
-	BaseRequest SMessageBaseRequest `json:"BaseRequest"`
-	Msg         SMessageMsg         `json:"Msg"`
-	Scene       int                 `json:"Scene"`
-}
-type SMessageInit struct {
-	BaseRequest SMessageBaseRequest `json:"BaseRequest"`
-}
-type SMessageSync struct {
-	BaseRequest SMessageBaseRequest `json:"BaseRequest"`
-	SyncKey     WxSyncKey           `json:"SyncKey"`
-	rr          int64               `json:"rr"`
-}
-type SMessageBaseRequest struct {
-	Uin      int64  `json:"Uin"`
-	Sid      string `json:"Sid"`
-	Skey     string `json:"Skey"`
-	DeviceID string `json:"DeviceID"`
-}
-type SMessageMsg struct {
-	Type         int    `json:"Type"`
-	Content      string `json:"Content"`
-	FromUserName string `json:"FromUserName"`
-	ToUserName   string `json:"ToUserName"`
-	LocalID      string `json:"LocalID"`
-	ClientMsgId  string `json:"ClientMsgId"`
-}
-
-type WxInitMessage struct {
-	BaseResponse map[string]interface{} `json:"BaseResponse"`
-	Count        int
-	ContactList  [](map[string]interface{}) `json:"ContactList"`
-	SyncKey      WxSyncKey                  `json:"SyncKey"`
-	User         map[string]interface{}     `json:"User"`
-}
-
-type WxSyncKey struct {
-	Count int                        `json:"Count"`
-	List  [](map[string]interface{}) `json:"List"`
-}
-
-func (we *Wechat) WebWxInit() {
-	we.Auth.DeviceId = "e679570618634105123"
+/**
+ * 微信初始化
+ */
+func (we *Wechat) WebWxInit() error {
+	we.Auth.DeviceId = DEVICE_ID
 
 	urlStr := "https://wx.qq.com/cgi-bin/mmwebwx-bin/webwxinit"
 	v := url.Values{}
@@ -237,53 +254,67 @@ func (we *Wechat) WebWxInit() {
 	v.Set("pass_ticket", we.Auth.PassTicket)
 	urlStr += "?" + v.Encode()
 
-	a := SMessageBaseRequest{
+	sMsgBaseReq := SMessageBaseRequest{
 		Uin:      we.Auth.Wxuin,
 		Sid:      we.Auth.Wxsid,
 		Skey:     we.Auth.Skey,
 		DeviceID: we.Auth.DeviceId,
 	}
-
-	b := SMessageInit{
-		BaseRequest: a,
+	sMsgInit := SMessageInit{
+		BaseRequest: sMsgBaseReq,
 	}
+	sMsgInitJsonBt, _ := json.Marshal(sMsgInit)
+	sMsgInitJsonStr := string(sMsgInitJsonBt)
 
-	c, _ := json.Marshal(b)
-
-	aaa := string(c)
-
-	// log.Println(aaa)
-	client, _ := myHttp.NewClient(http.MethodPost, urlStr, bytes.NewBufferString(aaa))
+	client, _ := myHttp.NewClient(http.MethodPost, urlStr, bytes.NewBufferString(sMsgInitJsonStr))
 	client.SetHeader("ContentType", "application/json; charset=UTF-8")
 	resp, err := client.Do()
 	if err != nil {
-		log.Fatal("get info err:", err)
+		log.Println("get info err:", err)
+		return err
 	}
 
 	if resp.StatusCode == 200 {
 		body, _ := ioutil.ReadAll(resp.Body)
 		bodyStr := string(body)
 		// log.Println(bodyStr)
-
-		var ttt WxInitMessage
-
+		var wxInitMsg WxInitMessage
 		decoder := json.NewDecoder(strings.NewReader(bodyStr))
-		decoder.Decode(&ttt)
-
-		log.Println(ttt.User, ttt.SyncKey)
-
-		eee, _ := json.Marshal(ttt.SyncKey)
-
-		log.Println(string(eee))
-
-		we.Auth.UserName = ttt.User["UserName"].(string)
-		we.Auth.SyncKey = ttt.SyncKey
-
+		decoder.Decode(&wxInitMsg)
+		// log.Println(wxInitMsg.User, wxInitMsg.SyncKey)
+		// log.Println(wxInitMsg.BaseResponse["Ret"], we.Auth.UserName)
+		if int(wxInitMsg.BaseResponse["Ret"].(float64)) != 0 {
+			log.Println("wxInit failed, we need to login again")
+			return errors.New("wxInit failed, we need to login again")
+		}
+		we.Auth.UserName = wxInitMsg.User["UserName"].(string)
+		we.Auth.SyncKey = wxInitMsg.SyncKey
+		we.IsLogin = true
 	} else {
-		log.Fatal("send msg err, status:", resp.StatusCode)
+		log.Println("send msg err, status:", resp.StatusCode)
+		return errors.New("wxInit failed, status" + strconv.FormatInt(int64(resp.StatusCode), 10))
 	}
+	return nil
 }
 
+func (we *Wechat) isLogin() bool {
+	if we.IsLogin {
+		return true
+	}
+	if len(we.Auth.Wxsid) == 0 {
+		return false
+	}
+	err := we.WebWxInit()
+	if err != nil {
+		we.Auth = AuthInfo{}
+		return false
+	}
+	return true
+}
+
+/**
+ * 微信会话保持
+ */
 func (we *Wechat) WebWxSync() {
 	urlStr := "https://wx.qq.com/cgi-bin/mmwebwx-bin/webwxsync"
 	v := url.Values{}
@@ -325,6 +356,9 @@ func (we *Wechat) WebWxSync() {
 	}
 }
 
+/**
+ * 发送消息
+ */
 func (we *Wechat) SendMsg(msgStr string) {
 	a := SMessageBaseRequest{
 		Uin:      we.Auth.Wxuin,
@@ -364,38 +398,6 @@ func (we *Wechat) SendMsg(msgStr string) {
 	} else {
 		log.Fatal("send msg err, status:", resp.StatusCode)
 	}
-}
-
-func getLoginStatus(uUid string) (retData map[string]string, err error) {
-	retData = make(map[string]string)
-	v := url.Values{}
-	v.Set("loginicon", "true")
-	v.Set("uuid", uUid)
-	v.Set("tip", "0")
-	v.Set("_", fmt.Sprintf("%d", time.Now().UnixNano()/1e6))
-	reqUrl := "https://login.wx.qq.com/cgi-bin/mmwebwx-bin/login" + "?" + v.Encode()
-	resp, _ := http.Get(reqUrl)
-	defer resp.Body.Close()
-	body, _ := ioutil.ReadAll(resp.Body)
-	bodyStr := string(body)
-	loginCodeData := loginCodeReg.FindStringSubmatch(bodyStr)
-	if len(loginCodeData) == 0 {
-		return retData, errors.New("get code failed")
-	}
-
-	retData["code"] = loginCodeData[1]
-	switch loginCodeData[1] {
-	case "201":
-		return retData, nil
-	case "200":
-		loginRedirectUrlData := loginRedirectUriReg.FindStringSubmatch(bodyStr)
-		if len(loginRedirectUrlData) == 0 {
-			return retData, errors.New("get redirect uri failed")
-		}
-		retData["redirect_uri"] = loginRedirectUrlData[1]
-		return retData, nil
-	}
-	return retData, nil
 }
 
 func init() {

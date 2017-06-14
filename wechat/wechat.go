@@ -3,19 +3,17 @@ package main
 import (
 	// "encoding/xml"
 	myApi "github.com/ghostboyzone/goplayground/wechat/api"
+	// "io/ioutil"
 	"log"
+	// "os"
 	"strconv"
 	"time"
 )
 
 func main() {
 	wechat := myApi.NewWechat()
-	// wechat.SetAuthInfo()
-	// log.Println(wechat.Auth.Wxsid)
 	wechat.ShowQrCode()
 	wechat.WaitForScan()
-	wechat.GetAuthInfo()
-	wechat.WebWxInit()
 
 	go func() {
 		for {
@@ -25,12 +23,9 @@ func main() {
 	}()
 
 	for {
+		msg := "my rand message, timestamp: " + strconv.FormatInt(time.Now().Unix(), 10)
+		wechat.SendMsg(msg)
+		log.Println("Send Message:", msg)
 		time.Sleep(10 * time.Second)
-		wechat.SendMsg("my rand message, timestamp: " + strconv.FormatInt(time.Now().Unix(), 10))
-		log.Println("11")
 	}
-
-	// xml.Name{}
-
-	// log.Println(wechat.Auth)
 }
