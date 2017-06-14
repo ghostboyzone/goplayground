@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/xml"
+	"net/http"
 )
 
 type Wechat struct {
@@ -10,9 +11,11 @@ type Wechat struct {
 	QrImgName   string
 	RedirectUri string
 	// Client  myHttp
-	Auth    AuthInfo
-	IsLogin bool
-	BaseUri string
+	Auth       AuthInfo
+	IsLogin    bool
+	BaseUri    string
+	BaseCookie []*http.Cookie
+	MemberList [](map[string]interface{})
 }
 
 type AuthInfo struct {
@@ -90,4 +93,11 @@ type WxSendMsgMessage struct {
 type WxStatusNotifyMessage struct {
 	BaseResponse map[string]interface{} `json:"BaseResponse"`
 	MsgId        string                 `json:"MsgID"`
+}
+
+type WxContact struct {
+	BaseResponse map[string]interface{}     `json:"BaseResponse"`
+	MemberCount  int64                      `json:"MemberCount"`
+	MemberList   [](map[string]interface{}) `json:"MemberList"`
+	Seq          int                        `json:"Seq"`
 }

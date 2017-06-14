@@ -55,6 +55,11 @@ func NewWechat() *Wechat {
 		we.BaseUri = baseUri
 	}
 
+	baseCookie := we.readBaseCookieFromFile()
+	if len(baseCookie) > 0 {
+		we.BaseCookie = baseCookie
+	}
+
 	go func() {
 		time.Sleep(5 * time.Second)
 		for {
@@ -227,6 +232,8 @@ func (we *Wechat) GetAuthInfo() {
 	if err != nil {
 		log.Fatal("get info err:", err)
 	}
+
+	// log.Println(resp.Cookies())
 	if resp.StatusCode == 200 {
 		body, _ := ioutil.ReadAll(resp.Body)
 		bodyStr := string(body)
@@ -235,51 +242,11 @@ func (we *Wechat) GetAuthInfo() {
 		we.WebWxInit()
 		we.writeAuthInfoToFile(bodyStr)
 		we.writeBaseUriToFile(we.BaseUri)
+		we.BaseCookie = resp.Cookies()
+		we.writeBaseCookieToFile(we.BaseCookie)
 	} else {
 		log.Fatal("get info err, status:", resp.StatusCode)
 	}
-}
-
-func (we *Wechat) writeAuthInfoToFile(authStr string) {
-	fp, err := os.OpenFile(TMP_AUTH_FILE, os.O_CREATE|os.O_WRONLY, 0600)
-	defer fp.Close()
-	if err != nil {
-		log.Println("Write auth info failed: create file failed")
-		return
-	}
-	fp.WriteString(authStr)
-	return
-}
-func (we *Wechat) readAuthInfoFromFile() string {
-	fp, err := os.Open(TMP_AUTH_FILE)
-	if err != nil {
-		log.Println("Cannot find previous auth info, start to call login")
-		return ""
-	}
-	body, _ := ioutil.ReadAll(fp)
-	log.Println("Read auth info:", string(body))
-	return string(body)
-}
-
-func (we *Wechat) writeBaseUriToFile(baseUri string) {
-	fp, err := os.OpenFile(TMP_BASE_URI_FILE, os.O_CREATE|os.O_WRONLY, 0600)
-	defer fp.Close()
-	if err != nil {
-		log.Println("Write base uri failed: create file failed")
-		return
-	}
-	fp.WriteString(baseUri)
-	return
-}
-func (we *Wechat) readBaseUriFromFile() string {
-	fp, err := os.Open(TMP_BASE_URI_FILE)
-	if err != nil {
-		log.Println("Cannot find previous base uri, start to call login")
-		return ""
-	}
-	body, _ := ioutil.ReadAll(fp)
-	log.Println("Read base uri:", string(body))
-	return string(body)
 }
 
 /**
@@ -318,6 +285,7 @@ func (we *Wechat) WebWxInit() error {
 
 	client, _ := myHttp.NewClient(http.MethodPost, urlStr, bytes.NewBufferString(sMsgInitJsonStr))
 	client.SetHeader("Content-Type", "application/json")
+	client.SetCookies(we.BaseCookie)
 	resp, err := client.Do()
 	if err != nil {
 		log.Println("wxInit err:", err)
@@ -390,6 +358,7 @@ func (we *Wechat) WebWxSync() {
 	sMsgSyncJsonStr := string(sMsgSyncJsonBt)
 	client, _ := myHttp.NewClient(http.MethodPost, urlStr, bytes.NewBufferString(sMsgSyncJsonStr))
 	client.SetHeader("Content-Type", "application/json")
+	client.SetCookies(we.BaseCookie)
 	resp, err := client.Do()
 	if err != nil {
 		log.Println("sync msg err:", err)
@@ -441,6 +410,7 @@ func (we *Wechat) WebWxNotify() {
 	sMsgNotifyJsonStr := string(sMsgNotifyJsonBt)
 	client, _ := myHttp.NewClient(http.MethodPost, urlStr, bytes.NewBufferString(sMsgNotifyJsonStr))
 	client.SetHeader("Content-Type", "application/json")
+	client.SetCookies(we.BaseCookie)
 	resp, err := client.Do()
 	if err != nil {
 		log.Println("status notify err:", err)
@@ -466,9 +436,50 @@ func (we *Wechat) WebWxNotify() {
 }
 
 /**
+ *
+ */
+func (we *Wechat) GetContact() {
+	urlStr := we.BaseUri + "/webwxgetcontact"
+	v := url.Values{}
+	v.Set("pass_ticket", we.Auth.PassTicket)
+	v.Set("skey", we.Auth.Skey)
+	v.Set("r", strconv.FormatInt(time.Now().Unix(), 10))
+	v.Set("lang", "zh_CN")
+	v.Set("seq", "653469746")
+	urlStr += "?" + v.Encode()
+	log.Println(urlStr)
+
+	client, _ := myHttp.NewClient(http.MethodGet, urlStr, nil)
+	client.SetHeader("Content-Type", "application/json")
+	client.SetCookies(we.BaseCookie)
+	resp, err := client.Do()
+	if err != nil {
+		log.Println("send msg err:", err)
+		return
+	}
+
+	if resp.StatusCode == 200 {
+		body, _ := ioutil.ReadAll(resp.Body)
+		bodyStr := string(body)
+		// log.Println(bodyStr)
+		var wxContact WxContact
+		decoder := json.NewDecoder(strings.NewReader(bodyStr))
+		decoder.Decode(&wxContact)
+		if int(wxContact.BaseResponse["Ret"].(float64)) != 0 {
+			log.Println("get contact failed")
+			return
+		}
+		we.MemberList = wxContact.MemberList
+		log.Println("get contact success")
+	} else {
+		log.Fatal("get contact err, status:", resp.StatusCode)
+	}
+}
+
+/**
  * 发送消息
  */
-func (we *Wechat) SendMsg(msgStr string) {
+func (we *Wechat) SendMsg(msgStr string, toUserName string) {
 	urlStr := we.BaseUri + "/webwxsendmsg"
 	v := url.Values{}
 	v.Set("pass_ticket", we.Auth.PassTicket)
@@ -485,7 +496,7 @@ func (we *Wechat) SendMsg(msgStr string) {
 		Type:         1,
 		Content:      msgStr,
 		FromUserName: we.Auth.UserName,
-		ToUserName:   "filehelper",
+		ToUserName:   toUserName,
 		LocalID:      randId,
 		ClientMsgId:  randId,
 	}
@@ -499,6 +510,7 @@ func (we *Wechat) SendMsg(msgStr string) {
 
 	client, _ := myHttp.NewClient(http.MethodPost, urlStr, bytes.NewBufferString(sMsgJsonStr))
 	client.SetHeader("Content-Type", "application/json")
+	client.SetCookies(we.BaseCookie)
 	resp, err := client.Do()
 	if err != nil {
 		log.Println("send msg err:", err)

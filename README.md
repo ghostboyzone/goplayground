@@ -18,6 +18,8 @@ This's go playground, enjoy :)
 
 - [jubi-api](./bitcoin): jubi api / 聚币网 API
 
+- [wechat-web-api](./wechat): 微信网页版API
+
 ### Dev
 
 * we use [govendor](https://github.com/kardianos/govendor) to manage packages
