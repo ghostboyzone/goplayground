@@ -42,12 +42,30 @@ func NewWechat() *Wechat {
 		RedirectUri: "",
 		Auth:        AuthInfo{},
 		IsLogin:     false,
+		BaseUri:     "https://wx.qq.com/cgi-bin/mmwebwx-bin",
 	}
 
 	authStr := we.readAuthInfoFromFile()
 	if len(authStr) > 0 {
 		we.SetAuthInfo(authStr)
 	}
+
+	baseUri := we.readBaseUriFromFile()
+	if len(baseUri) > 0 {
+		we.BaseUri = baseUri
+	}
+
+	go func() {
+		time.Sleep(5 * time.Second)
+		for {
+			if we.isLogin() {
+				we.WebWxNotify()
+				we.WebWxSync()
+			}
+			time.Sleep(10 * time.Second)
+		}
+	}()
+
 	return we
 }
 
@@ -140,9 +158,17 @@ func (we *Wechat) WaitForScan() {
 			log.Println("Scanned, wait for confirm")
 		} else if data["code"] == "200" {
 			log.Println("Done", data["redirect_uri"])
+
+			cutIdx := strings.LastIndex(data["redirect_uri"], "/")
+			if cutIdx == -1 {
+				cutIdx = len(data["redirect_uri"])
+			}
+			we.BaseUri = data["redirect_uri"][:cutIdx]
+
 			we.RedirectUri = data["redirect_uri"] + "&fun=new"
 			// 获取授权信息
 			we.GetAuthInfo()
+
 			break
 		} else if data["code"] == "408" {
 			log.Fatal("Timeout, quit")
@@ -163,6 +189,7 @@ func getLoginStatus(uUid string) (retData map[string]string, err error) {
 	v.Set("uuid", uUid)
 	v.Set("tip", "0")
 	v.Set("_", fmt.Sprintf("%d", time.Now().UnixNano()/1e6))
+	// v.Set("r", fmt.S)
 	reqUrl := "https://login.wx.qq.com/cgi-bin/mmwebwx-bin/login" + "?" + v.Encode()
 	resp, _ := http.Get(reqUrl)
 	defer resp.Body.Close()
@@ -207,6 +234,7 @@ func (we *Wechat) GetAuthInfo() {
 		we.SetAuthInfo(bodyStr)
 		we.WebWxInit()
 		we.writeAuthInfoToFile(bodyStr)
+		we.writeBaseUriToFile(we.BaseUri)
 	} else {
 		log.Fatal("get info err, status:", resp.StatusCode)
 	}
@@ -233,6 +261,27 @@ func (we *Wechat) readAuthInfoFromFile() string {
 	return string(body)
 }
 
+func (we *Wechat) writeBaseUriToFile(baseUri string) {
+	fp, err := os.OpenFile(TMP_BASE_URI_FILE, os.O_CREATE|os.O_WRONLY, 0600)
+	defer fp.Close()
+	if err != nil {
+		log.Println("Write base uri failed: create file failed")
+		return
+	}
+	fp.WriteString(baseUri)
+	return
+}
+func (we *Wechat) readBaseUriFromFile() string {
+	fp, err := os.Open(TMP_BASE_URI_FILE)
+	if err != nil {
+		log.Println("Cannot find previous base uri, start to call login")
+		return ""
+	}
+	body, _ := ioutil.ReadAll(fp)
+	log.Println("Read base uri:", string(body))
+	return string(body)
+}
+
 /**
  * 设置授权信息
  */
@@ -248,8 +297,9 @@ func (we *Wechat) SetAuthInfo(authStr string) {
 func (we *Wechat) WebWxInit() error {
 	we.Auth.DeviceId = DEVICE_ID
 
-	urlStr := "https://wx.qq.com/cgi-bin/mmwebwx-bin/webwxinit"
+	urlStr := we.BaseUri + "/webwxinit"
 	v := url.Values{}
+	v.Set("r", strconv.FormatInt(time.Now().Unix(), 10))
 	v.Set("lang", "zh_CN")
 	v.Set("pass_ticket", we.Auth.PassTicket)
 	urlStr += "?" + v.Encode()
@@ -267,22 +317,19 @@ func (we *Wechat) WebWxInit() error {
 	sMsgInitJsonStr := string(sMsgInitJsonBt)
 
 	client, _ := myHttp.NewClient(http.MethodPost, urlStr, bytes.NewBufferString(sMsgInitJsonStr))
-	client.SetHeader("ContentType", "application/json; charset=UTF-8")
+	client.SetHeader("Content-Type", "application/json")
 	resp, err := client.Do()
 	if err != nil {
-		log.Println("get info err:", err)
+		log.Println("wxInit err:", err)
 		return err
 	}
 
 	if resp.StatusCode == 200 {
 		body, _ := ioutil.ReadAll(resp.Body)
 		bodyStr := string(body)
-		// log.Println(bodyStr)
 		var wxInitMsg WxInitMessage
 		decoder := json.NewDecoder(strings.NewReader(bodyStr))
 		decoder.Decode(&wxInitMsg)
-		// log.Println(wxInitMsg.User, wxInitMsg.SyncKey)
-		// log.Println(wxInitMsg.BaseResponse["Ret"], we.Auth.UserName)
 		if int(wxInitMsg.BaseResponse["Ret"].(float64)) != 0 {
 			log.Println("wxInit failed, we need to login again")
 			return errors.New("wxInit failed, we need to login again")
@@ -291,7 +338,7 @@ func (we *Wechat) WebWxInit() error {
 		we.Auth.SyncKey = wxInitMsg.SyncKey
 		we.IsLogin = true
 	} else {
-		log.Println("send msg err, status:", resp.StatusCode)
+		log.Println("wxInit err, status:", resp.StatusCode)
 		return errors.New("wxInit failed, status" + strconv.FormatInt(int64(resp.StatusCode), 10))
 	}
 	return nil
@@ -307,6 +354,8 @@ func (we *Wechat) isLogin() bool {
 	err := we.WebWxInit()
 	if err != nil {
 		we.Auth = AuthInfo{}
+		os.Remove(TMP_AUTH_FILE)
+		os.Remove(TMP_BASE_URI_FILE)
 		return false
 	}
 	return true
@@ -316,85 +365,158 @@ func (we *Wechat) isLogin() bool {
  * 微信会话保持
  */
 func (we *Wechat) WebWxSync() {
-	urlStr := "https://wx.qq.com/cgi-bin/mmwebwx-bin/webwxsync"
+	urlStr := we.BaseUri + "/webwxsync"
 	v := url.Values{}
 	v.Set("sid", we.Auth.Wxsid)
 	v.Set("skey", we.Auth.Skey)
 	v.Set("pass_ticket", we.Auth.PassTicket)
 	urlStr += "?" + v.Encode()
 
-	a := SMessageBaseRequest{
+	sMsgBaseReq := SMessageBaseRequest{
 		Uin:      we.Auth.Wxuin,
 		Sid:      we.Auth.Wxsid,
 		Skey:     we.Auth.Skey,
 		DeviceID: we.Auth.DeviceId,
 	}
 
-	b := SMessageSync{
-		BaseRequest: a,
+	sMsgSync := SMessageSync{
+		BaseRequest: sMsgBaseReq,
 		SyncKey:     we.Auth.SyncKey,
 		rr:          time.Now().Unix(),
 	}
 
-	c, _ := json.Marshal(b)
+	sMsgSyncJsonBt, _ := json.Marshal(sMsgSync)
 
-	aaa := string(c)
-	client, _ := myHttp.NewClient(http.MethodPost, urlStr, bytes.NewBufferString(aaa))
-	client.SetHeader("ContentType", "application/json; charset=UTF-8")
+	sMsgSyncJsonStr := string(sMsgSyncJsonBt)
+	client, _ := myHttp.NewClient(http.MethodPost, urlStr, bytes.NewBufferString(sMsgSyncJsonStr))
+	client.SetHeader("Content-Type", "application/json")
 	resp, err := client.Do()
 	if err != nil {
-		log.Fatal("get info err:", err)
+		log.Println("sync msg err:", err)
+		return
 	}
 
 	if resp.StatusCode == 200 {
 		body, _ := ioutil.ReadAll(resp.Body)
-		_ = string(body)
+		bodyStr := string(body)
 		// log.Println(bodyStr)
-		log.Println("Sync success")
+		var wxSyncMsg WxSyncMessage
+		decoder := json.NewDecoder(strings.NewReader(bodyStr))
+		decoder.Decode(&wxSyncMsg)
+		if int(wxSyncMsg.BaseResponse["Ret"].(float64)) != 0 {
+			log.Println("sync msg failed")
+			return
+		}
+		we.Auth.SyncKey = wxSyncMsg.SyncKey
+		log.Println("sync success")
 	} else {
-		log.Fatal("sync msg err, status:", resp.StatusCode)
+		log.Println("sync msg err, status:", resp.StatusCode)
 	}
+	return
+}
+
+func (we *Wechat) WebWxNotify() {
+	urlStr := we.BaseUri + "/webwxstatusnotify"
+	v := url.Values{}
+	v.Set("lang", "zh_CN")
+	v.Set("pass_ticket", we.Auth.PassTicket)
+	urlStr += "?" + v.Encode()
+
+	sMsgBaseReq := SMessageBaseRequest{
+		Uin:      we.Auth.Wxuin,
+		Sid:      we.Auth.Wxsid,
+		Skey:     we.Auth.Skey,
+		DeviceID: we.Auth.DeviceId,
+	}
+	sMsgNotify := SMessageNotify{
+		BaseRequest:  sMsgBaseReq,
+		Code:         3,
+		FromUserName: we.Auth.UserName,
+		ToUserName:   we.Auth.UserName,
+		ClientMsgId:  time.Now().Unix(),
+	}
+
+	sMsgNotifyJsonBt, _ := json.Marshal(sMsgNotify)
+
+	sMsgNotifyJsonStr := string(sMsgNotifyJsonBt)
+	client, _ := myHttp.NewClient(http.MethodPost, urlStr, bytes.NewBufferString(sMsgNotifyJsonStr))
+	client.SetHeader("Content-Type", "application/json")
+	resp, err := client.Do()
+	if err != nil {
+		log.Println("status notify err:", err)
+		return
+	}
+
+	if resp.StatusCode == 200 {
+		body, _ := ioutil.ReadAll(resp.Body)
+		bodyStr := string(body)
+		// log.Println(bodyStr)
+		var wxStatusNotify WxStatusNotifyMessage
+		decoder := json.NewDecoder(strings.NewReader(bodyStr))
+		decoder.Decode(&wxStatusNotify)
+		if int(wxStatusNotify.BaseResponse["Ret"].(float64)) != 0 {
+			log.Println("status notify failed")
+			return
+		}
+		log.Println("status notify success")
+	} else {
+		log.Println("status notify err, status:", resp.StatusCode)
+	}
+	return
 }
 
 /**
  * 发送消息
  */
 func (we *Wechat) SendMsg(msgStr string) {
-	a := SMessageBaseRequest{
+	urlStr := we.BaseUri + "/webwxsendmsg"
+	v := url.Values{}
+	v.Set("pass_ticket", we.Auth.PassTicket)
+	urlStr += "?" + v.Encode()
+
+	sMsgBaseReq := SMessageBaseRequest{
 		Uin:      we.Auth.Wxuin,
 		Sid:      we.Auth.Wxsid,
 		Skey:     we.Auth.Skey,
 		DeviceID: we.Auth.DeviceId,
 	}
-	ttt := fmt.Sprintf("%d", time.Now().UnixNano()/1e5)
-	b := SMessageMsg{
+	randId := fmt.Sprintf("%d", time.Now().UnixNano()/1e5)
+	sMsgMsg := SMessageMsg{
 		Type:         1,
 		Content:      msgStr,
 		FromUserName: we.Auth.UserName,
 		ToUserName:   "filehelper",
-		LocalID:      ttt,
-		ClientMsgId:  ttt,
+		LocalID:      randId,
+		ClientMsgId:  randId,
 	}
-	c := SMessage{
-		BaseRequest: a,
-		Msg:         b,
+	sMsg := SMessage{
+		BaseRequest: sMsgBaseReq,
+		Msg:         sMsgMsg,
 		Scene:       0,
 	}
+	sMsgJsonBt, _ := json.Marshal(sMsg)
+	sMsgJsonStr := string(sMsgJsonBt)
 
-	d, _ := json.Marshal(c)
-
-	aaa := string(d)
-	client, _ := myHttp.NewClient(http.MethodPost, "https://wx.qq.com/cgi-bin/mmwebwx-bin/webwxsendmsg?pass_ticket="+we.Auth.PassTicket, bytes.NewBufferString(aaa))
-	client.SetHeader("ContentType", "application/json; charset=UTF-8")
+	client, _ := myHttp.NewClient(http.MethodPost, urlStr, bytes.NewBufferString(sMsgJsonStr))
+	client.SetHeader("Content-Type", "application/json")
 	resp, err := client.Do()
 	if err != nil {
-		log.Fatal("get info err:", err)
+		log.Println("send msg err:", err)
+		return
 	}
 
 	if resp.StatusCode == 200 {
 		body, _ := ioutil.ReadAll(resp.Body)
 		bodyStr := string(body)
-		log.Println(bodyStr)
+		// log.Println(bodyStr)
+		var wxSendMsgMsg WxSendMsgMessage
+		decoder := json.NewDecoder(strings.NewReader(bodyStr))
+		decoder.Decode(&wxSendMsgMsg)
+		if int(wxSendMsgMsg.BaseResponse["Ret"].(float64)) != 0 {
+			log.Println("send msg failed")
+			return
+		}
+		log.Println("send msg success")
 	} else {
 		log.Fatal("send msg err, status:", resp.StatusCode)
 	}

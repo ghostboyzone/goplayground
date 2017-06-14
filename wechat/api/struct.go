@@ -12,6 +12,7 @@ type Wechat struct {
 	// Client  myHttp
 	Auth    AuthInfo
 	IsLogin bool
+	BaseUri string
 }
 
 type AuthInfo struct {
@@ -40,6 +41,13 @@ type SMessageSync struct {
 	SyncKey     WxSyncKey           `json:"SyncKey"`
 	rr          int64               `json:"rr"`
 }
+type SMessageNotify struct {
+	BaseRequest  SMessageBaseRequest `json:"BaseRequest"`
+	Code         int                 `json:"Code"`
+	FromUserName string              `json:"FromUserName"`
+	ToUserName   string              `json:"ToUserName"`
+	ClientMsgId  int64               `json:"ClientMsgId"`
+}
 type SMessageBaseRequest struct {
 	Uin      int64  `json:"Uin"`
 	Sid      string `json:"Sid"`
@@ -66,4 +74,20 @@ type WxInitMessage struct {
 type WxSyncKey struct {
 	Count int                        `json:"Count"`
 	List  [](map[string]interface{}) `json:"List"`
+}
+
+type WxSyncMessage struct {
+	BaseResponse map[string]interface{} `json:"BaseResponse"`
+	SyncKey      WxSyncKey              `json:"SyncKey"`
+}
+
+type WxSendMsgMessage struct {
+	BaseResponse map[string]interface{} `json:"BaseResponse"`
+	MsgId        string                 `json:"MsgID"`
+	LocalId      string                 `json:"LocalID"`
+}
+
+type WxStatusNotifyMessage struct {
+	BaseResponse map[string]interface{} `json:"BaseResponse"`
+	MsgId        string                 `json:"MsgID"`
 }
