@@ -98,9 +98,9 @@ func Wallet(coinName string) map[string]interface{} {
 func getCommonParams(coinName string) url.Values {
 	v := url.Values{}
 	v.Add("coin", coinName)
-	nonce := strconv.FormatInt(time.Now().UnixNano()/1e6, 10)
 	// sleep 1ms, 避免nonce冲突
 	time.Sleep(time.Millisecond * 1)
+	nonce := strconv.FormatInt(time.Now().UnixNano()/1e6, 10)
 	v.Add("nonce", nonce)
 	v.Add("key", PUBLIC_KEY)
 	return v
