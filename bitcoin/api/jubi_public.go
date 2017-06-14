@@ -68,6 +68,7 @@ func Trends() resultJson.CoinHashes {
 
 /**
  * 所有币的信息
+ * (币的中文名、实时价格、买1、卖1、最高价、最低价、成交量、成交额)
  * https://www.jubi.com/coin/allcoin
  */
 func AllCoin() map[string]([]interface{}) {

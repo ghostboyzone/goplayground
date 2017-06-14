@@ -169,6 +169,42 @@
 			"revisionTime": "2016-03-02T14:40:31Z"
 		},
 		{
+			"checksumSHA1": "dezZFwteKCEvEN0IkR6XSD6qoJU=",
+			"path": "github.com/tidwall/btree",
+			"revision": "9876f1454cf0993a53d74c27196993e345f50dd1",
+			"revisionTime": "2017-01-13T22:41:14Z"
+		},
+		{
+			"checksumSHA1": "jF02GFKCLQlLWscQHtv43mWpBVM=",
+			"path": "github.com/tidwall/buntdb",
+			"revision": "83418750ee775aa24194606fffe7fec391975a65",
+			"revisionTime": "2017-03-22T14:35:28Z"
+		},
+		{
+			"checksumSHA1": "mq6AQOilxW1tKj2bVsuqCDlcCSo=",
+			"path": "github.com/tidwall/gjson",
+			"revision": "c784c417818f59d6597274642d8ac1d09efc9b01",
+			"revisionTime": "2017-05-26T02:39:18Z"
+		},
+		{
+			"checksumSHA1": "fB70Sk+JyVkdav2NHeNjG8Z0mkQ=",
+			"path": "github.com/tidwall/grect",
+			"revision": "ba9a043346eba55344e40d66a5e74cfda3a9d293",
+			"revisionTime": "2016-10-06T13:56:19Z"
+		},
+		{
+			"checksumSHA1": "qmePMXEDYGwkAfT9QvtMC58JN/E=",
+			"path": "github.com/tidwall/match",
+			"revision": "173748da739a410c5b0b813b956f89ff94730b4c",
+			"revisionTime": "2016-08-30T17:39:30Z"
+		},
+		{
+			"checksumSHA1": "lCeIrhrooBzMXbB/YH32E7I4MSU=",
+			"path": "github.com/tidwall/rtree",
+			"revision": "d4a8a3d30d5729f85edfba1745241f3a621d0359",
+			"revisionTime": "2016-09-03T21:37:29Z"
+		},
+		{
 			"checksumSHA1": "Y+HGqEkYM15ir+J93MEaHdyFy0c=",
 			"path": "golang.org/x/net/context",
 			"revision": "59a0b19b5533c7977ddeb86b017bf507ed407b12",
