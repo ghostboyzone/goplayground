@@ -26,8 +26,8 @@ func main() {
 		log.Fatal(err)
 	}
 
-	startT, _ := fmtdate.Parse("YYYY-MM-DD hh:mm:ss ZZ", "2017-06-13 00:00:00 +00:00")
-	endT, _ := fmtdate.Parse("YYYY-MM-DD hh:mm:ss ZZ", "2017-06-15 01:00:00 +00:00")
+	startT, _ := fmtdate.Parse("YYYY-MM-DD hh:mm:ss ZZ", "2017-06-15 00:00:00 +00:00")
+	endT, _ := fmtdate.Parse("YYYY-MM-DD hh:mm:ss ZZ", "2017-06-15 09:30:00 +00:00")
 
 	initCoins()
 	// log.Println(myCoins)
@@ -90,5 +90,5 @@ func cmpData(before, after map[string]float64) {
 		totalCnt++
 		log.Println(k, "now", nowRate, "total", totalRate, totalCnt)
 	}
-	log.Println("Result: ", totalRate, totalCnt)
+	log.Println("Result: ", totalRate/float64(totalCnt), "%, total:", totalCnt)
 }
