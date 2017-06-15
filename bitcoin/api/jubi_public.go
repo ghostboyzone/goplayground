@@ -17,6 +17,17 @@ var (
 )
 
 /**
+ * 所有牌价
+ * https://www.jubi.com/help/api.html#three-four
+ */
+func AllTicker() (coinMap map[string](resultJson.CoinLatestNew)) {
+	v := url.Values{}
+	decoder := json.NewDecoder(strings.NewReader(reqPublic("/api/v1/allticker", v)))
+	decoder.Decode(&coinMap)
+	return coinMap
+}
+
+/**
  * 牌价
  * https://www.jubi.com/help/api.html#three-one
  */

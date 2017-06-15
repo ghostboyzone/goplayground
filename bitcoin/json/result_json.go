@@ -21,6 +21,16 @@ type CoinLatest struct {
 	Volume float64 `json:"volume"`
 }
 
+type CoinLatestNew struct {
+	High   float64 `json:"high"`
+	Low    float64 `json:"low"`
+	Buy    float64 `json:"buy"`
+	Sell   float64 `json:"sell"`
+	Last   float64 `json:"last"`
+	Vol    float64 `json:"vol"`
+	Volume float64 `json:"volume"`
+}
+
 func (c CoinLatest) String() string {
 	return fmt.Sprintf("High[%s] Low[%s] Buy[%s] Sell[%s] Last[%s] Vol[%s] Volume[%s]", c.High, c.Low, c.Buy, c.Sell, c.Last, c.Vol, c.Volume)
 }
