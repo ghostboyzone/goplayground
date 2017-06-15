@@ -6,42 +6,72 @@ import (
 	// "github.com/boltdb/bolt"
 	// apiReq "github.com/ghostboyzone/goplayground/bitcoin/api"
 	"github.com/ghostboyzone/goplayground/bitcoin/db"
+	wechatApi "github.com/ghostboyzone/goplayground/wechat/api"
 	"github.com/metakeule/fmtdate"
 	"log"
-	// "os"
+	"os"
 	"strconv"
 	"strings"
 	"time"
 )
 
 var (
-	myCoins map[string]([]interface{})
-	bt      *db.BitCoin
+	myCoins    map[string]([]interface{})
+	bt         *db.BitCoin
+	wechat     *wechatApi.Wechat
+	toUserName string
+	nickName   string
 )
 
 func main() {
+	wechat = wechatApi.NewWechat()
+	wechat.ShowQrCode()
+	wechat.WaitForScan()
+	wechat.GetContact()
+
+	nickName = "filehelper"
+	toUserName = "filehelper"
+	fp, _ := os.OpenFile("contact.mlog", os.O_CREATE|os.O_WRONLY, 0600)
+	defer fp.Close()
+	for _, v := range wechat.MemberList {
+		toBeWrite := fmt.Sprintf("NickName[%s] RemarkName[%s] UserName[%s]\n\n", v["NickName"].(string), v["RemarkName"].(string), v["UserName"].(string))
+		fp.WriteString(toBeWrite)
+		if v["RemarkName"].(string) == nickName || v["NickName"].(string) == nickName {
+			toUserName = v["UserName"].(string)
+		}
+	}
+
 	var err error
-	bt, err = db.InitBitCoin()
+	bt, err = db.InitBitCoin("bitcoin.dbdata", true)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	bt.CreateIndex("coin_data", "coin:*")
+	min := 10
 
-	tt, _ := bt.Get("coin:lsk:1497324600")
+	for {
 
-	log.Println(tt)
+		bt.Load("bitcoin.dbdata")
+		bt.CreateIndex("coin_data", "coin:*")
 
-	startT, _ := fmtdate.Parse("YYYY-MM-DD hh:mm:ss ZZ", "2017-06-15 00:00:00 +00:00")
-	endT, _ := fmtdate.Parse("YYYY-MM-DD hh:mm:ss ZZ", "2017-06-15 09:30:00 +00:00")
+		initCoins()
 
-	initCoins()
-	// log.Println(myCoins)
-	// log.Println(nowT.In(time.UTC).Unix())
-	t1 := getAll(startT)
-	t2 := getAll(endT)
-	// log.Println(t1, t2, t1["aaa"])
-	cmpData(t1, t2)
+		endStr := fmt.Sprintf("2017-06-15 13:%d:00 +00:00", min)
+
+		wechat.SendMsg(endStr, toUserName)
+
+		// fmtdate.Parse("", time.Now().Format("2006-01-02 15:04:05"))
+		startT, _ := fmtdate.Parse("YYYY-MM-DD hh:mm:ss ZZ", "2017-06-15 00:00:00 +00:00")
+		endT, _ := fmtdate.Parse("YYYY-MM-DD hh:mm:ss ZZ", endStr)
+		t1 := getAll(startT)
+		t2 := getAll(endT)
+
+		cmpData(t1, t2)
+
+		time.Sleep(5 * time.Minute)
+		min += 5
+
+	}
 
 	bt.Close()
 }
@@ -98,5 +128,8 @@ func cmpData(before, after map[string]float64) {
 		totalCnt++
 		log.Println(k, "now", nowRate, "total", totalRate, totalCnt)
 	}
-	log.Println("Result: ", totalRate/float64(totalCnt), "%, total:", totalCnt)
+	tmpStr := fmt.Sprintf("Result: %f%s, total: %d", totalRate/float64(totalCnt), "%", totalCnt)
+	// log.Println("Result: ", totalRate/float64(totalCnt), "%, total:", totalCnt)
+	log.Println(tmpStr)
+	wechat.SendMsg(tmpStr, toUserName)
 }

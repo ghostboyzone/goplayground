@@ -2,16 +2,23 @@ package db
 
 import (
 	"github.com/tidwall/buntdb"
+	"os"
+	"time"
 )
 
 type BitCoin struct {
 	Db         *buntdb.DB
 	DbFileName string
+	ReadOnly   bool
 }
 
-func InitBitCoin() (bitCoin *BitCoin, err error) {
-	dbFileName := "bitcoin.dbdata"
-	db, err := buntdb.Open(dbFileName)
+func InitBitCoin(dbFileName string, readOnly bool) (bitCoin *BitCoin, err error) {
+	var db *buntdb.DB
+	if readOnly {
+		db, err = buntdb.Open(":memory:")
+	} else {
+		db, err = buntdb.Open(dbFileName)
+	}
 
 	if err != nil {
 		return bitCoin, err
@@ -20,8 +27,36 @@ func InitBitCoin() (bitCoin *BitCoin, err error) {
 	bitCoin = &BitCoin{
 		Db:         db,
 		DbFileName: dbFileName,
+		ReadOnly:   readOnly,
 	}
+
+	err = bitCoin.setConfig()
+	if err != nil {
+		return bitCoin, err
+	}
+
+	bitCoin.Load(dbFileName)
+
+	go func() {
+		for {
+			time.Sleep(1 * time.Second)
+			bitCoin.Load(dbFileName)
+		}
+	}()
+
 	return bitCoin, nil
+}
+
+func (bt *BitCoin) setConfig() (err error) {
+	var config buntdb.Config
+	err = bt.Db.ReadConfig(&config)
+	if err != nil {
+		return err
+	}
+	// config.AutoShrinkMinSize = 5 * 1024 * 1024
+	config.AutoShrinkDisabled = true
+	err = bt.Db.SetConfig(config)
+	return err
 }
 
 func (bt *BitCoin) Close() {
@@ -53,4 +88,13 @@ func (bt *BitCoin) CreateIndex(indexName string, pattern string) error {
 
 func (bt *BitCoin) Shrink() error {
 	return bt.Db.Shrink()
+}
+
+func (bt *BitCoin) Load(path string) error {
+	fp, err := os.Open(path)
+	defer fp.Close()
+	if err != nil {
+		return err
+	}
+	return bt.Db.Load(fp)
 }
