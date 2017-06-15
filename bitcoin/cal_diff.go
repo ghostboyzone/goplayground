@@ -26,6 +26,12 @@ func main() {
 		log.Fatal(err)
 	}
 
+	bt.CreateIndex("coin_data", "coin:*")
+
+	tt, _ := bt.Get("coin:lsk:1497324600")
+
+	log.Println(tt)
+
 	startT, _ := fmtdate.Parse("YYYY-MM-DD hh:mm:ss ZZ", "2017-06-15 00:00:00 +00:00")
 	endT, _ := fmtdate.Parse("YYYY-MM-DD hh:mm:ss ZZ", "2017-06-15 09:30:00 +00:00")
 
@@ -36,6 +42,8 @@ func main() {
 	t2 := getAll(endT)
 	// log.Println(t1, t2, t1["aaa"])
 	cmpData(t1, t2)
+
+	bt.Close()
 }
 
 func initCoins() {

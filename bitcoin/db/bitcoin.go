@@ -46,3 +46,11 @@ func (bt *BitCoin) Get(key string) (value string, err error) {
 	})
 	return value, err
 }
+
+func (bt *BitCoin) CreateIndex(indexName string, pattern string) error {
+	return bt.Db.CreateIndex(indexName, pattern, buntdb.IndexString)
+}
+
+func (bt *BitCoin) Shrink() error {
+	return bt.Db.Shrink()
+}

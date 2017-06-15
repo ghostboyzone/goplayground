@@ -8,6 +8,7 @@ import (
 	// "strconv"
 	"fmt"
 	// "time"
+	// "os"
 )
 
 var (
@@ -20,6 +21,8 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	// bt.CreateIndex("coin_data", "coin:*")
 
 	// write all coin
 	totalResult := apiReq.AllCoin()
@@ -35,6 +38,9 @@ func main() {
 		writeKData(coinName, "8h")
 		writeKData(coinName, "1d")
 	}
+
+	bt.Shrink()
+	bt.Close()
 }
 
 func writeKData(coinName string, unit string) {
