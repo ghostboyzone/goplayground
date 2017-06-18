@@ -1,7 +1,11 @@
 package json
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
+	"strconv"
+	"strings"
 )
 
 type CoinTrends struct {
@@ -46,4 +50,52 @@ type CoinJsDetail struct {
 	OneH     [][]interface{} `json:"1h"`
 	EightH   [][]interface{} `json:"8h"`
 	OneD     [][]interface{} `json:"1d"`
+}
+
+type CoinKUnit struct {
+	Timestamp int64
+	Amount    float64
+	Open      float64
+	High      float64
+	Low       float64
+	Close     float64
+}
+
+func StringToFloat64(value string) (f float64) {
+	f, _ = strconv.ParseFloat(value, 64)
+	return
+}
+
+func InterfaceToFloat64(value interface{}) (f float64) {
+	switch value.(type) {
+	case float64:
+		f = value.(float64)
+	case string:
+		f = StringToFloat64(value.(string))
+	}
+	return
+}
+
+func FormatCoinKUnit(value []interface{}) (coinKUnit CoinKUnit, err error) {
+	if len(value) != 6 {
+		err = errors.New("Invalid value, no enough length")
+		return
+	}
+
+	return CoinKUnit{
+		Timestamp: int64(value[0].(float64) / 1000),
+		Amount:    InterfaceToFloat64(value[1]),
+		Open:      InterfaceToFloat64(value[2]),
+		High:      InterfaceToFloat64(value[3]),
+		Low:       InterfaceToFloat64(value[4]),
+		Close:     InterfaceToFloat64(value[5]),
+	}, nil
+}
+
+func FormatCoinKUnitByString(value string) (coinKUnit CoinKUnit, err error) {
+	var oneV []interface{}
+	decoder := json.NewDecoder(strings.NewReader(string(value)))
+	decoder.Decode(&oneV)
+	coinKUnit, err = FormatCoinKUnit(oneV)
+	return
 }

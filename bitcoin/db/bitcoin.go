@@ -2,6 +2,7 @@ package db
 
 import (
 	"github.com/tidwall/buntdb"
+	// "log"
 	"os"
 	"time"
 )
@@ -10,6 +11,7 @@ type BitCoin struct {
 	Db         *buntdb.DB
 	DbFileName string
 	ReadOnly   bool
+	Closed     bool
 }
 
 func InitBitCoin(dbFileName string, readOnly bool) (bitCoin *BitCoin, err error) {
@@ -28,6 +30,7 @@ func InitBitCoin(dbFileName string, readOnly bool) (bitCoin *BitCoin, err error)
 		Db:         db,
 		DbFileName: dbFileName,
 		ReadOnly:   readOnly,
+		Closed:     false,
 	}
 
 	err = bitCoin.setConfig()
@@ -35,14 +38,18 @@ func InitBitCoin(dbFileName string, readOnly bool) (bitCoin *BitCoin, err error)
 		return bitCoin, err
 	}
 
-	bitCoin.Load(dbFileName)
-
-	go func() {
-		for {
-			time.Sleep(1 * time.Second)
-			bitCoin.Load(dbFileName)
-		}
-	}()
+	if readOnly {
+		bitCoin.Load(dbFileName)
+		go func(bitCoin *BitCoin, dbFileName string) {
+			for {
+				time.Sleep(1 * time.Second)
+				if bitCoin.Closed {
+					break
+				}
+				bitCoin.Load(dbFileName)
+			}
+		}(bitCoin, dbFileName)
+	}
 
 	return bitCoin, nil
 }
@@ -60,6 +67,7 @@ func (bt *BitCoin) setConfig() (err error) {
 }
 
 func (bt *BitCoin) Close() {
+	bt.Closed = true
 	bt.Db.Close()
 }
 
@@ -92,9 +100,10 @@ func (bt *BitCoin) Shrink() error {
 
 func (bt *BitCoin) Load(path string) error {
 	fp, err := os.Open(path)
-	defer fp.Close()
+	// defer fp.Close()
 	if err != nil {
 		return err
 	}
-	return bt.Db.Load(fp)
+	err = bt.Db.Load(fp)
+	return err
 }

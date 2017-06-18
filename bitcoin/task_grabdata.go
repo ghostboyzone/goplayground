@@ -5,7 +5,6 @@ package main
 
 import (
 	"encoding/json"
-	"flag"
 	"fmt"
 	apiReq "github.com/ghostboyzone/goplayground/bitcoin/api"
 	"github.com/ghostboyzone/goplayground/bitcoin/db"
@@ -14,27 +13,19 @@ import (
 )
 
 var (
-	bt           *db.BitCoin
+	unit_maps    []string
+	bt           map[string](*db.BitCoin)
 	visitTimeMap map[int64]bool
 )
 
 func main() {
 	// 5m  30m  1h  8h  1d
-	unit := flag.String("unit", "5m", "-unit 5m")
-	flag.Parse()
-	log.Println("unit: ", *unit)
-	var err error
-	bt, err = db.InitBitCoin("bitcoin.dbdata", false)
-	defer bt.Close()
-	if err != nil {
-		log.Fatal(err)
-	}
-	bt.CreateIndex("coin_data", "coin:*")
+	initDb()
 
 	// write all coin
 	totalResult := apiReq.AllCoin()
 	totalResultJsonBt, _ := json.Marshal(totalResult)
-	bt.Set("all_coin", string(totalResultJsonBt))
+	bt["all"].Set("all_coin", string(totalResultJsonBt))
 
 	visitTimeMap = make(map[int64]bool)
 	for {
@@ -48,9 +39,15 @@ func main() {
 		for k, v := range totalResult {
 			coinName := string(k)
 			log.Println("coin:", coinName, v[0].(string))
-			writeKData(coinName, *unit)
+			for _, unit := range unit_maps {
+				writeKData(coinName, unit)
+			}
 		}
-		time.Sleep(time.Minute * 1)
+		for _, unit := range unit_maps {
+			bt[unit].Shrink()
+		}
+		time.Sleep(time.Minute * 2)
+
 	}
 }
 
@@ -61,7 +58,7 @@ func writeKData(coinName string, unit string) {
 		tmpJsonBt1, _ := json.Marshal(tmpV)
 		cKey := fmt.Sprintf("coin:%s:%d", coinName, tmpK)
 		log.Println(unit, coinName, "start", tmpK, cKey, string(tmpJsonBt1))
-		errW := bt.Set(cKey, string(tmpJsonBt1))
+		errW := bt[unit].Set(cKey, string(tmpJsonBt1))
 		if errW != nil {
 			log.Println(errW)
 		}
@@ -74,4 +71,21 @@ func writeKData(coinName string, unit string) {
  */
 func formatTime5m(time int64) int64 {
 	return time - time%300
+}
+
+func initDb() {
+	unit_maps = []string{"5m", "30m", "1h", "8h", "1d"}
+	bt = make(map[string](*db.BitCoin))
+	var err error
+	bt["all"], err = db.InitBitCoin("data/allcoins.dbdata", false)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, unit := range unit_maps {
+		bt[unit], err = db.InitBitCoin("data/coin_"+unit+".dbdata", false)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
 }

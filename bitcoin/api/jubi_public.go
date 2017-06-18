@@ -31,12 +31,25 @@ func AllTicker() (coinMap map[string](resultJson.CoinLatestNew)) {
  * 牌价
  * https://www.jubi.com/help/api.html#three-one
  */
-func Ticker(coinName string) (coin resultJson.CoinLatest) {
+func Ticker(coinName string) resultJson.CoinLatestNew {
+	var coin resultJson.CoinLatest
 	v := url.Values{}
 	v.Add("coin", coinName)
 	decoder := json.NewDecoder(strings.NewReader(reqPublic("/api/v1/ticker", v)))
 	decoder.Decode(&coin)
-	return coin
+	return formatCoinLatest(coin)
+}
+
+func formatCoinLatest(coin resultJson.CoinLatest) (newCoin resultJson.CoinLatestNew) {
+	return resultJson.CoinLatestNew{
+		High:   resultJson.StringToFloat64(coin.High),
+		Low:    resultJson.StringToFloat64(coin.Low),
+		Buy:    resultJson.StringToFloat64(coin.Buy),
+		Sell:   resultJson.StringToFloat64(coin.Sell),
+		Last:   resultJson.StringToFloat64(coin.Last),
+		Vol:    coin.Vol,
+		Volume: coin.Volume,
+	}
 }
 
 /**

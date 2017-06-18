@@ -15,23 +15,21 @@ import (
 
 var (
 	myCoins map[string]([]interface{})
-	bt      *db.BitCoin
 )
 
 func main() {
-	var err error
-	bt, err = db.InitBitCoin("bitcoin.dbdata", true)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer bt.Close()
-
 	initCoins()
 
 	totalTimes := 1
 	for {
+		bt, err := db.InitBitCoin("data/coin_1d.dbdata", true)
+		defer bt.Close()
+		if err != nil {
+			log.Fatal(err)
+		}
+
 		color.Unset()
-		log.Println("T: ", totalTimes)
+		log.Println("T: ", totalTimes, "start")
 		nowAllCoins := apiReq.AllTicker()
 		// log.Println(nowAllCoins)
 		for coinName, v := range myCoins {
@@ -80,6 +78,7 @@ func main() {
 		}
 		totalTimes++
 		defer color.Unset()
+		log.Println("T: ", totalTimes, "done")
 		time.Sleep(time.Second * 15)
 	}
 
@@ -95,11 +94,15 @@ func getTodayZero() time.Time {
 }
 
 func initCoins() {
+	bt, err := db.InitBitCoin("data/allcoins.dbdata", true)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer bt.Close()
 	v, err := bt.Get("all_coin")
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	decoder := json.NewDecoder(strings.NewReader(v))
 	decoder.Decode(&myCoins)
 }

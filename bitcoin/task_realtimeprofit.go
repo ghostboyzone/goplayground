@@ -99,7 +99,7 @@ func getAllRealTime() map[string]float64 {
 		maxCh <- 1
 		go func(coinName, coinCName string) {
 			coin := apiReq.Ticker(coinName)
-			price, _ := strconv.ParseFloat(coin.Last, 64)
+			price := coin.Last
 			log.Println("realtime", coinName, coinCName, price)
 			result[coinName] = price
 			<-maxCh
