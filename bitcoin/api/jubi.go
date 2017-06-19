@@ -12,8 +12,24 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
+
+var (
+	nonceMap NonceMap
+)
+
+type NonceMap struct {
+	Data map[int64]int64
+	sync.RWMutex
+}
+
+func init() {
+	nonceMap = NonceMap{
+		Data: make(map[int64]int64),
+	}
+}
 
 /**
  * 挂单查询
@@ -99,8 +115,16 @@ func getCommonParams(coinName string) url.Values {
 	v := url.Values{}
 	v.Add("coin", coinName)
 	// sleep 1ms, 避免nonce冲突
-	time.Sleep(time.Millisecond * 1)
-	nonce := strconv.FormatInt(time.Now().UnixNano()/1e6, 10)
+	// time.Sleep(time.Millisecond * 1)
+	millTimestamp := time.Now().UnixNano() / 1e6
+	// log.Println(nonceMap[millTimestamp])
+	nonceMap.Lock()
+	if nonceMap.Data[millTimestamp] == 0 {
+		nonceMap.Data[millTimestamp] = 0
+	}
+	nonceMap.Data[millTimestamp]++
+	nonce := strconv.FormatInt(millTimestamp+nonceMap.Data[millTimestamp], 10)
+	nonceMap.Unlock()
 	v.Add("nonce", nonce)
 	v.Add("key", PUBLIC_KEY)
 	return v
@@ -113,6 +137,7 @@ func req(api string, v url.Values) string {
 	resp, _ := http.PostForm(reqUrl, v)
 	defer resp.Body.Close()
 	body, _ := ioutil.ReadAll(resp.Body)
+	// log.Println(string(body))
 	return string(body)
 }
 
