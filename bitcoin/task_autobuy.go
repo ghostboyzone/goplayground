@@ -61,25 +61,30 @@ func main() {
 			nowRate := 100 * (newSellPrice - oldSellPrice) / oldSellPrice
 			if nowRate*-1 >= 30 {
 				color.Set(color.FgRed, color.Bold)
-				log.Println("[-30]", coinName, coinCName, oldSellPrice, newSellPrice, nowRate)
-			}
-			if nowRate*-1 >= 15 {
+				log.Println("[>= -30%]", coinName, coinCName, oldSellPrice, newSellPrice, nowRate)
+			} else if nowRate*-1 >= 15 {
 				color.Set(color.FgYellow, color.Bold)
-				log.Println("[-15]", coinName, coinCName, oldSellPrice, newSellPrice, nowRate)
-			}
-			if nowRate*-1 >= 10 {
+				log.Println("[>= -15%]", coinName, coinCName, oldSellPrice, newSellPrice, nowRate)
+			} else if nowRate*-1 >= 10 {
 				color.Set(color.FgCyan, color.Bold)
-				log.Println("[-10]", coinName, coinCName, oldSellPrice, newSellPrice, nowRate)
+				log.Println("[>= -10%]", coinName, coinCName, oldSellPrice, newSellPrice, nowRate)
+			} else if nowRate*-1 >= 5 {
+				color.Set(color.FgCyan, color.Bold)
+				log.Println("[>= -5%]", coinName, coinCName, oldSellPrice, newSellPrice, nowRate)
 			}
-			if nowRate >= 10 {
+			if nowRate >= 80 {
+				color.Set(color.FgRed, color.Bold)
+				log.Println("[>= +80%]", coinName, coinCName, oldSellPrice, newSellPrice, nowRate)
+			} else if nowRate >= 10 {
 				color.Set(color.FgGreen, color.Bold)
-				log.Println("[+10]", coinName, coinCName, oldSellPrice, newSellPrice, nowRate)
+				log.Println("[>= +10%]", coinName, coinCName, oldSellPrice, newSellPrice, nowRate)
 			}
 		}
+
+		log.Println("T: ", totalTimes, "done")
 		totalTimes++
 		defer color.Unset()
-		log.Println("T: ", totalTimes, "done")
-		time.Sleep(time.Second * 15)
+		time.Sleep(time.Second * 30)
 	}
 
 }

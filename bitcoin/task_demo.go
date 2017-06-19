@@ -40,6 +40,7 @@ func main() {
 
 		avgPrice := make(map[int64]float64)
 		avgAmount := make(map[int64]float64)
+		dropRate := make(map[int64]float64)
 
 		canBuyCnt := int64(0)
 		for i := int64(1); i <= preHours; i++ {
@@ -62,10 +63,9 @@ func main() {
 			avgPrice[i] = totalValue / totalAmount
 			avgAmount[i] = totalAmount / float64(i)
 
-			if coinName == "max" {
-
-				log.Println(coinName, v[0], i, avgPrice[i], avgAmount[i])
-			}
+			// if coinName == "mtc" {
+			// log.Println(coinName, v[0], i, avgPrice[i], avgAmount[i])
+			// }
 
 			if i > 1 {
 				if avgPrice[i] != 0 && avgAmount[i] != 0 && avgPrice[i] > avgPrice[i-1] && avgAmount[i] < avgAmount[i-1] {
@@ -74,10 +74,21 @@ func main() {
 			}
 		}
 
-		if canBuyCnt == preHours-1 {
+		for i := int64(1); i < preHours; i++ {
+			dropRate[i] = (avgPrice[i] - avgPrice[i+1]) / avgPrice[i+1]
+			// if coinName == "mtc" {
+			// log.Println(dropRate[i])
+			// }
+		}
+
+		if canBuyCnt == preHours-1 && dropRate[1] > dropRate[2] {
 			color.Set(color.FgGreen, color.Bold)
 			log.Println(coinName, v[0], "can buy", avgPrice[1], avgAmount[1])
 		} else {
+			if canBuyCnt == preHours-2 {
+				color.Set(color.FgGreen, color.Bold)
+				log.Println(coinName, v[0], "very close", avgPrice[1], avgAmount[1])
+			}
 			color.Set(color.FgRed, color.Bold)
 			log.Println(coinName, v[0], "can not buy")
 		}

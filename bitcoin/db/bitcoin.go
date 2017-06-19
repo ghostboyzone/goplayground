@@ -100,7 +100,7 @@ func (bt *BitCoin) Shrink() error {
 
 func (bt *BitCoin) Load(path string) error {
 	fp, err := os.Open(path)
-	// defer fp.Close()
+	defer fp.Close()
 	if err != nil {
 		return err
 	}
