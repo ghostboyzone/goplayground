@@ -19,7 +19,6 @@ import (
 
 var (
 	myCoins map[string]([]interface{})
-	bt      *db.BitCoin
 )
 
 func main() {
@@ -34,15 +33,6 @@ func main() {
 
 	startT, _ := fmtdate.Parse("YYYY-MM-DD hh:mm ZZ", *startStr+" +00:00")
 
-	var err error
-	bt, err = db.InitBitCoin("bitcoin.dbdata", true)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer bt.Close()
-
-	bt.CreateIndex("coin_data", "coin:*")
-
 	initCoins()
 
 	t1 := getAll(startT)
@@ -54,16 +44,26 @@ func main() {
 }
 
 func initCoins() {
+	bt, err := db.InitBitCoin("data/allcoins.dbdata", true)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer bt.Close()
 	v, err := bt.Get("all_coin")
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	decoder := json.NewDecoder(strings.NewReader(v))
 	decoder.Decode(&myCoins)
 }
 
 func getAll(t time.Time) map[string]float64 {
+	bt, err := db.InitBitCoin("data/coin_5m.dbdata", true)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer bt.Close()
+
 	result := make(map[string]float64)
 	uTime := t.In(time.UTC).Unix()
 	for coinName, v := range myCoins {

@@ -1,12 +1,15 @@
+/**
+ * 订单查询
+ */
 package main
 
 import (
 	"encoding/json"
 	apiReq "github.com/ghostboyzone/goplayground/bitcoin/api"
 	"github.com/ghostboyzone/goplayground/bitcoin/db"
+	"github.com/metakeule/fmtdate"
 	"log"
 	// "os"
-	"github.com/metakeule/fmtdate"
 	"sort"
 	"strings"
 	"time"
@@ -31,6 +34,8 @@ func main() {
 				for _, v2 := range tmp {
 					v2["coin_name"] = coinName
 					v2["coin_cname"] = coinCName
+					orderDetail := apiReq.TradeView(coinName, v2["id"].(string))
+					v2["status"] = orderDetail["status"]
 					orderList = append(orderList, v2)
 
 					tmpT, err := fmtdate.Parse("YYYY-MM-DD hh:mm:ss ZZ", v2["datetime"].(string)+" +08:00")
@@ -54,7 +59,8 @@ func main() {
 	sortMyOrders(orderList)
 	// log.Println(orderList)
 	for _, a := range orderList {
-		log.Println(a)
+		log.Println(a["id"], "\t", a["coin_name"], "\t", a["coin_cname"], "\t", a["datetime"], "\t", a["type"], "\t", a["status"], "\tprice:", a["price"], ", total:", a["amount_original"], ", left:", a["amount_outstanding"], ", amount:", a["amount_original"].(float64)-a["amount_outstanding"].(float64))
+
 	}
 }
 
