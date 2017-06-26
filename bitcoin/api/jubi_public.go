@@ -142,7 +142,10 @@ func reqPublic(api string, v url.Values) string {
 		reqUrl += "?" + v.Encode()
 	}
 	// log.Println("req_public", reqUrl)
-	resp, _ := http.Get(reqUrl)
+	resp, err := http.Get(reqUrl)
+	if err != nil {
+		return ""
+	}
 	defer resp.Body.Close()
 	body, _ := ioutil.ReadAll(resp.Body)
 	return string(body)

@@ -21,18 +21,14 @@ var (
 func main() {
 
 	buyedCoins = make(map[string]BuyedCoin)
-	buyedCoins["ifc"] = BuyedCoin{
-		Price:    0.001152,
-		Amount:   260456.2500333,
-		NowPrice: apiReq.Ticker("ifc").Buy,
-	}
-	buyedCoins["ppc"] = BuyedCoin{
-		Price:    16.6,
-		Amount:   34.883082,
-		NowPrice: apiReq.Ticker("ppc").Buy,
-	}
 
 	for {
+		buyedCoins["bts"] = BuyedCoin{
+			Price:    2.18,
+			Amount:   2997,
+			NowPrice: apiReq.Ticker("bts").Buy,
+		}
+
 		for coinName, v := range buyedCoins {
 			rate := 100 * (v.NowPrice - v.Price) / v.Price
 			earnMoney := (v.NowPrice - v.Price) * v.Amount
@@ -48,7 +44,7 @@ func main() {
 			log.Println(str)
 		}
 		color.Unset()
-		time.Sleep(time.Second * 5)
+		time.Sleep(time.Second * 15)
 	}
 
 }
