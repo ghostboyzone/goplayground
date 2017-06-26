@@ -1,3 +1,6 @@
+/**
+ * 每小时预测可买入的币
+ */
 package main
 
 import (
@@ -6,11 +9,11 @@ import (
 	"github.com/fatih/color"
 	"github.com/ghostboyzone/goplayground/bitcoin/db"
 	resultJson "github.com/ghostboyzone/goplayground/bitcoin/json"
-	"github.com/tidwall/buntdb"
+	// "github.com/tidwall/buntdb"
 	"log"
 	"strings"
 	// "github.com/metakeule/fmtdate"
-	"os"
+	// "os"
 	"strconv"
 	"time"
 )
@@ -31,6 +34,8 @@ func main() {
 	}
 
 	preHours := int64(8)
+
+	var suggestMaps, nearSuggestMaps, otherMaps []map[string]interface{}
 
 	for coinName, v := range myCoins {
 		// log.Println(coinName, v[0])
@@ -81,45 +86,45 @@ func main() {
 			// }
 		}
 
+		tmp := make(map[string]interface{})
+		tmp["name"] = coinName
+		tmp["cname"] = v[0]
+		tmp["avg_price"] = avgPrice[1]
+		tmp["avg_amount"] = avgAmount[1]
+
 		if canBuyCnt == preHours-1 && dropRate[1] > dropRate[2] {
 			color.Set(color.FgGreen, color.Bold)
-			log.Println(coinName, v[0], "can buy", avgPrice[1], avgAmount[1])
+			suggestMaps = append(suggestMaps, tmp)
 		} else {
 			if canBuyCnt == preHours-2 {
 				color.Set(color.FgGreen, color.Bold)
-				log.Println(coinName, v[0], "very close", avgPrice[1], avgAmount[1])
+				nearSuggestMaps = append(nearSuggestMaps, tmp)
+			} else {
+				color.Set(color.FgRed, color.Bold)
+				otherMaps = append(otherMaps, tmp)
 			}
-			color.Set(color.FgRed, color.Bold)
-			log.Println(coinName, v[0], "can not buy")
 		}
-		color.Unset()
 	}
+	fmt.Println("\n")
+	for _, v := range suggestMaps {
+		color.Set(color.FgGreen, color.Bold)
+		log.Println("can buy:", v["name"], v["cname"], v["avg_price"], v["avg_amount"])
+	}
+	fmt.Println("")
+	for _, v := range nearSuggestMaps {
+		color.Set(color.FgBlue, color.Bold)
+		log.Println("very close to buy:", v["name"], v["cname"], v["avg_price"], v["avg_amount"])
+	}
+	fmt.Println("")
+	for _, v := range otherMaps {
+		color.Set(color.FgRed, color.Bold)
+		log.Println("can not buy:", v["name"], v["cname"], v["avg_price"], v["avg_amount"])
+	}
+	color.Unset()
 
 	// 1h 2h 4h 8h 12h 18h 24h
 
 	// 5 10 20 30
-	os.Exit(0)
-
-	bt.CreateIndex("coin_data_doge", "coin:doge:*")
-
-	bt.Db.View(func(tx *buntdb.Tx) error {
-		tx.Ascend("coin_data_doge", func(key, val string) bool {
-			fmt.Printf("%s %s\n", key, val)
-
-			kUnit, err := resultJson.FormatCoinKUnitByString(val)
-			if err != nil {
-				log.Println(err)
-				return false
-			}
-			log.Println(time.Unix(kUnit.Timestamp, 0).In(time.UTC).Format("2006-01-02 15:04"))
-
-			return true
-		})
-		return nil
-	})
-
-	// cKey := fmt.Sprintf("coin:%s:%d", coinName, getTodayZero().In(time.UTC).Unix())
-	// resultTmp, err := bt.Get(cKey)
 }
 
 func getPreTimestamp() int64 {
