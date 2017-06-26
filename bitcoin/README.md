@@ -31,3 +31,16 @@
           ```
           go run task_autobuy.go
           ```
+
+    * 个人相关
+
+        * 查询历史所有挂单：[`task_checkorders.go`](/bitcoin/task_checkorders.go) 
+          ```
+          go run task_checkorders.go
+          ```
+
+        * 查询实时收益情况：[`task_checkprofit.go`](/bitcoin/task_checkprofit.go) 
+          (需要修改代码)
+          ```
+          go run task_checkprofit.go
+          ```
