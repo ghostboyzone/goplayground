@@ -53,6 +53,18 @@ func formatCoinLatest(coin resultJson.CoinLatest) (newCoin resultJson.CoinLatest
 }
 
 /**
+ * 今日开盘价接口
+ */
+func Yprice(coinName string) map[string]interface{} {
+	v := url.Values{}
+	v.Add("coin", coinName)
+	var data map[string]interface{}
+	decoder := json.NewDecoder(strings.NewReader(reqPublic("/api/v1/yprice", v)))
+	decoder.Decode(&data)
+	return data
+}
+
+/**
  * 市场深度
  * https://www.jubi.com/help/api.html#three-two
  */

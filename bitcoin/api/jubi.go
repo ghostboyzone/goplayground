@@ -91,8 +91,8 @@ func TradeAdd(coinName string, amount string, price string, type1 string) map[st
  * 账户信息
  * https://www.jubi.com/help/api.html#three-four
  */
-func Balance(coinName string) map[string]interface{} {
-	v := getCommonParams(coinName)
+func Balance() map[string]interface{} {
+	v := getCommonParams("")
 	var data map[string]interface{}
 	decoder := json.NewDecoder(strings.NewReader(req("balance", v)))
 	decoder.Decode(&data)
@@ -113,7 +113,9 @@ func Wallet(coinName string) map[string]interface{} {
 
 func getCommonParams(coinName string) url.Values {
 	v := url.Values{}
-	v.Add("coin", coinName)
+	if coinName != "" {
+		v.Add("coin", coinName)
+	}
 	// sleep 1ms, 避免nonce冲突
 	// time.Sleep(time.Millisecond * 1)
 	millTimestamp := time.Now().UnixNano() / 1e6
