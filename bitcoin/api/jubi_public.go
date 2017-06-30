@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -81,9 +82,10 @@ func Depth(coinName string) map[string]([][]interface{}) {
  * 市场交易
  * https://www.jubi.com/help/api.html#three-three
  */
-func Orders(coinName string) [](map[string]interface{}) {
+func Orders(coinName string, since int64) [](map[string]interface{}) {
 	v := url.Values{}
 	v.Add("coin", coinName)
+	v.Add("since", strconv.FormatInt(since, 10))
 	var data [](map[string]interface{})
 	decoder := json.NewDecoder(strings.NewReader(reqPublic("/api/v1/orders", v)))
 	decoder.Decode(&data)

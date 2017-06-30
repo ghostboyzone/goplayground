@@ -30,6 +30,8 @@ type Message struct {
 type tHashMap map[string]int64
 
 var (
+	uploadMod     string
+	lastConfTime  int64
 	rMap          myConf.HashMap
 	excludeFiles  []string
 	lastModifyMap tHashMap
@@ -42,10 +44,29 @@ var (
 
 func main() {
 	confFile := flag.String("conf", "config.json", "-conf config.json")
+	confMod := flag.String("mode", "all", "-mode all | -mode update")
 	flag.Parse()
-	parseConf = myConf.NewConf(*confFile)
-	rMap = parseConf.GetPaths()
-	excludeFiles = parseConf.Client.ExcludeFiles
+	uploadMod = *confMod
+	go func(confPath string) {
+		for {
+			time.Sleep(time.Millisecond * 500)
+			fileInfo, _ := os.Stat(confPath)
+			if lastConfTime == fileInfo.ModTime().Unix() {
+				continue
+			}
+			log.Println("Update Conf", lastConfTime)
+			parseConf = myConf.NewConf(confPath)
+			rMap = parseConf.GetPaths()
+			excludeFiles = parseConf.Client.ExcludeFiles
+			lastConfTime = fileInfo.ModTime().Unix()
+		}
+	}(*confFile)
+	for {
+		if lastConfTime != 0 {
+			break
+		}
+	}
+
 	lastModifyMap = make(tHashMap)
 
 	dir_max_ch := make(chan int, 1)
@@ -55,7 +76,7 @@ func main() {
 		startTime := time.Now().Unix()
 		isDirty := false
 		for tmpPath, _ := range rMap {
-			// log.Println("Start Process: [local]", tmpPath, ", [remote]", tmpNewPath)
+			// log.Println("Start Process: [local]", tmpPath)
 
 			dirMsgs = dirMsgs[0:0]
 			fileMsgs = fileMsgs[0:0]
@@ -200,6 +221,11 @@ func walkFuc(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			log.Fatal(err)
 		}
+
+		if uploadMod == "update" {
+			return nil
+		}
+
 		log.Println("new file => ", "local: "+path, "remote: "+newPath)
 
 		prepareSend(path, newPath, info)

@@ -10,6 +10,7 @@ import (
 	"github.com/metakeule/fmtdate"
 	"log"
 	// "os"
+	"github.com/fatih/color"
 	"sort"
 	"strings"
 	"time"
@@ -22,14 +23,22 @@ var (
 
 func main() {
 	initCoins()
+	startT, _ := fmtdate.Parse("YYYY-MM-DD hh:mm ZZ", "2017-06-29 10:40 +08:00")
+	// 查询开始时间
+	startTimestamp := startT.Unix()
+	// 如果为0，表示历史所有挂单
+	startTimestamp = 0
 
-	maxCh := make(chan int, 1)
+	maxCh := make(chan int, 20)
 
 	for coinName, v1 := range myCoins {
 		maxCh <- 1
 
+		time.Sleep(time.Millisecond * 30)
+
 		go func(coinName string, coinCName string) {
-			tmp := apiReq.TradeList(coinName)
+			tmp := apiReq.TradeList(coinName, startTimestamp)
+			log.Println(coinName, tmp)
 			if len(tmp) != 0 {
 				for _, v2 := range tmp {
 					v2["coin_name"] = coinName
@@ -59,9 +68,14 @@ func main() {
 	sortMyOrders(orderList)
 	// log.Println(orderList)
 	for _, a := range orderList {
+		if a["type"].(string) == "sell" {
+			color.Set(color.FgGreen, color.Bold)
+		} else {
+			color.Set(color.FgRed, color.Bold)
+		}
 		log.Println(a["id"], "\t", a["coin_name"], "\t", a["coin_cname"], "\t", a["datetime"], "\t", a["type"], "\t", a["status"], "\tprice:", a["price"], ", total:", a["amount_original"], ", left:", a["amount_outstanding"], ", amount:", a["amount_original"].(float64)-a["amount_outstanding"].(float64))
-
 	}
+	color.Unset()
 }
 
 type ByDate []map[string]interface{}

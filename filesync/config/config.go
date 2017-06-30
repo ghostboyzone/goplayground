@@ -36,6 +36,7 @@ func NewConf(filePath string) ConfigConf {
 	log.Println("Read Conf: ", filePath)
 	file, _ := os.Open(filePath)
 	decoder := json.NewDecoder(file)
+	defer file.Close()
 
 	var myConf ConfigConf
 	decoder.Decode(&myConf)

@@ -21,13 +21,13 @@ var (
 )
 
 type NonceMap struct {
-	Data map[int64]int64
+	Data int64
 	sync.RWMutex
 }
 
 func init() {
 	nonceMap = NonceMap{
-		Data: make(map[int64]int64),
+		Data: 0,
 	}
 }
 
@@ -35,10 +35,10 @@ func init() {
  * 挂单查询
  * https://www.jubi.com/help/api.html#three-six
  */
-func TradeList(coinName string) []map[string]interface{} {
+func TradeList(coinName string, since int64) []map[string]interface{} {
 	v := getCommonParams(coinName)
 	v.Add("type", "all")
-	v.Add("since", "0")
+	v.Add("since", strconv.FormatInt(since, 10))
 	var data []map[string]interface{}
 	decoder := json.NewDecoder(strings.NewReader(req("trade_list", v)))
 	decoder.Decode(&data)
@@ -117,15 +117,21 @@ func getCommonParams(coinName string) url.Values {
 		v.Add("coin", coinName)
 	}
 	// sleep 1ms, 避免nonce冲突
-	// time.Sleep(time.Millisecond * 1)
+	time.Sleep(time.Millisecond * 10)
 	millTimestamp := time.Now().UnixNano() / 1e6
 	// log.Println(nonceMap[millTimestamp])
 	nonceMap.Lock()
-	if nonceMap.Data[millTimestamp] == 0 {
-		nonceMap.Data[millTimestamp] = 0
+	if nonceMap.Data == 0 {
+		nonceMap.Data = millTimestamp
 	}
-	nonceMap.Data[millTimestamp]++
-	nonce := strconv.FormatInt(millTimestamp+nonceMap.Data[millTimestamp], 10)
+	nonceMap.Data++
+	nonce := strconv.FormatInt(nonceMap.Data, 10)
+
+	// if nonceMap.Data[millTimestamp] == 0 {
+	// 	nonceMap.Data[millTimestamp] = 0
+	// }
+	// nonceMap.Data[millTimestamp]++
+	// nonce := strconv.FormatInt(millTimestamp+nonceMap.Data[millTimestamp], 10)
 	nonceMap.Unlock()
 	v.Add("nonce", nonce)
 	v.Add("key", PUBLIC_KEY)
@@ -139,7 +145,7 @@ func req(api string, v url.Values) string {
 	resp, _ := http.PostForm(reqUrl, v)
 	defer resp.Body.Close()
 	body, _ := ioutil.ReadAll(resp.Body)
-	// log.Println(string(body))
+	// log.Println(api, string(body))
 	return string(body)
 }
 
