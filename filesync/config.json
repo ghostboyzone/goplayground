@@ -10,14 +10,8 @@
         "batch_send_files": 100,
         "paths": [
             {
-                "local": "E:\\code\\waimai\\x_commodity\\shopui\\",
-                "remote": "/home/map/odp_commodity/app/shopui/"
-            },{
-                "local": "E:\\code\\waimai\\x_commodity\\marketing\\",
-                "remote": "/home/map/odp_commodity/app/marketing/"
-            },{
-                "local": "E:\\code\\waimai\\x_commodity\\commodity\\",
-                "remote": "/home/map/odp_commodity/app/commodity/"
+                "local": "E:\\code\\test\\",
+                "remote": "/home/aaa/test/"
             }
         ],
         "exclude_files": [
