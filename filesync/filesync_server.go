@@ -2,7 +2,7 @@ package main
 
 import (
 	// "fmt"
-	"bytes"
+	// "bytes"
 	"encoding/json"
 	"flag"
 	myConf "github.com/ghostboyzone/goplayground/filesync/config"
@@ -17,7 +17,7 @@ import (
 
 type Message struct {
 	MsgType  int         `json:"msg_type"`
-	Data     string      `json:"data"`
+	Data     []byte      `json:"data"`
 	Path     string      `json:"path"`
 	FileMode os.FileMode `json:"filemode"`
 }
@@ -87,7 +87,8 @@ func parseMsg(message Message) {
 			log.Println(err)
 		}
 
-		err = ioutil.WriteFile(path, bytes.NewBufferString(message.Data).Bytes(), message.FileMode)
+		// err = ioutil.WriteFile(path, bytes.NewBufferString(message.Data).Bytes(), message.FileMode)
+		err = ioutil.WriteFile(path, message.Data, message.FileMode)
 		if err != nil {
 			log.Println(err)
 		}

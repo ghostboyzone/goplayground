@@ -22,7 +22,7 @@ import (
 
 type Message struct {
 	MsgType  int         `json:"msg_type"`
-	Data     string      `json:"data"`
+	Data     []byte      `json:"data"`
 	Path     string      `json:"path"`
 	FileMode os.FileMode `json:"filemode"`
 }
@@ -219,10 +219,10 @@ func walkFuc(path string, info os.FileInfo, err error) error {
 
 	// first time, send to remote
 	if lastModifyMap[path] == 0 {
+		lastModifyMap[path] = info.ModTime().Unix()
 		if uploadMod == "update" {
 			return nil
 		}
-		lastModifyMap[path] = info.ModTime().Unix()
 		arrNewPath, err := getRemoteFilePath(path)
 		if err != nil {
 			log.Fatal(err)
@@ -259,7 +259,7 @@ func prepareSend(localPath string, remotePath string, info os.FileInfo) (msg Mes
 	if info.IsDir() {
 		msg = Message{
 			MsgType:  2,
-			Data:     "",
+			Data:     []byte(""),
 			Path:     remotePath,
 			FileMode: info.Mode(),
 		}
@@ -269,7 +269,7 @@ func prepareSend(localPath string, remotePath string, info os.FileInfo) (msg Mes
 		ff_bytes, _ := ioutil.ReadFile(localPath)
 		msg = Message{
 			MsgType:  1,
-			Data:     string(ff_bytes),
+			Data:     ff_bytes,
 			Path:     remotePath,
 			FileMode: info.Mode(),
 		}
