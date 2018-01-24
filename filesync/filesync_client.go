@@ -75,6 +75,8 @@ func main() {
 	dir_max_ch := make(chan int, 1)
 	file_max_ch := make(chan int, parseConf.Client.SendChannels)
 
+	isFirst := true
+
 	for {
 		startTime := time.Now().Unix()
 		isDirty := false
@@ -132,10 +134,11 @@ func main() {
 		}
 
 		endTime := time.Now().Unix()
-		if isDirty {
+		if isFirst || isDirty {
 			tStr := formatTimeString(endTime - startTime)
 			log.Println("Cost: ", tStr, ", Everything is now ready!")
 		}
+		isFirst = false
 		time.Sleep(time.Second * 1)
 	}
 }
@@ -220,15 +223,18 @@ func walkFuc(path string, info os.FileInfo, err error) error {
 	// first time, send to remote
 	if lastModifyMap[path] == 0 {
 		lastModifyMap[path] = info.ModTime().Unix()
-		if uploadMod == "update" {
-			return nil
-		}
+
 		arrNewPath, err := getRemoteFilePath(path)
 		if err != nil {
 			log.Fatal(err)
 		}
 		for _, newPath := range arrNewPath {
-			log.Println("new file => ", "local: "+path, "remote: "+newPath)
+			if uploadMod == "update" {
+				log.Println("skip file => ", "local: "+path, "remote: "+newPath)
+				return nil
+			} else {
+				log.Println("new file => ", "local: "+path, "remote: "+newPath)
+			}
 			prepareSend(path, newPath, info)
 		}
 	} else {
