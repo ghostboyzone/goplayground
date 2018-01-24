@@ -30,11 +30,14 @@ type Message struct {
 type tHashMap map[string]int64
 
 var (
-	uploadMod     string
-	lastConfTime  int64
-	rMap          myConf.HashMap
-	excludeFiles  []string
-	lastModifyMap tHashMap
+	// 更新模式（all：全量更新 update：增量更新）
+	uploadMod string
+	// 配置文件上次更新时间
+	lastConfTime int64
+
+	local2RemoteMap myConf.Local2RemoteMap
+	excludeFiles    []string
+	lastModifyMap   tHashMap
 	// conn          *websocket.Conn
 	// max_ch    chan int
 	parseConf myConf.ConfigConf
@@ -56,7 +59,7 @@ func main() {
 			}
 			log.Println("Update Conf", lastConfTime)
 			parseConf = myConf.NewConf(confPath)
-			rMap = parseConf.GetPaths()
+			local2RemoteMap = parseConf.GetPaths()
 			excludeFiles = parseConf.Client.ExcludeFiles
 			lastConfTime = fileInfo.ModTime().Unix()
 		}
@@ -75,7 +78,7 @@ func main() {
 	for {
 		startTime := time.Now().Unix()
 		isDirty := false
-		for tmpPath, _ := range rMap {
+		for tmpPath, _ := range local2RemoteMap {
 			// log.Println("Start Process: [local]", tmpPath)
 
 			dirMsgs = dirMsgs[0:0]
@@ -216,30 +219,30 @@ func walkFuc(path string, info os.FileInfo, err error) error {
 
 	// first time, send to remote
 	if lastModifyMap[path] == 0 {
-		lastModifyMap[path] = info.ModTime().Unix()
-		newPath, err := getRemoteFilePath(path)
-		if err != nil {
-			log.Fatal(err)
-		}
-
 		if uploadMod == "update" {
 			return nil
 		}
-
-		log.Println("new file => ", "local: "+path, "remote: "+newPath)
-
-		prepareSend(path, newPath, info)
+		lastModifyMap[path] = info.ModTime().Unix()
+		arrNewPath, err := getRemoteFilePath(path)
+		if err != nil {
+			log.Fatal(err)
+		}
+		for _, newPath := range arrNewPath {
+			log.Println("new file => ", "local: "+path, "remote: "+newPath)
+			prepareSend(path, newPath, info)
+		}
 	} else {
 		// if file or dir modified, send to remote
 		if info.ModTime().Unix() != lastModifyMap[path] {
 			lastModifyMap[path] = info.ModTime().Unix()
-			newPath, err := getRemoteFilePath(path)
+			arrNewPath, err := getRemoteFilePath(path)
 			if err != nil {
 				log.Fatal(err)
 			}
-			log.Println("update file", "local: "+path, "remote: "+newPath)
-
-			prepareSend(path, newPath, info)
+			for _, newPath := range arrNewPath {
+				log.Println("update file", "local: "+path, "remote: "+newPath)
+				prepareSend(path, newPath, info)
+			}
 		}
 	}
 	return nil
@@ -278,14 +281,19 @@ func prepareSend(localPath string, remotePath string, info os.FileInfo) (msg Mes
 
 /**
  * get remote file path
- * @param  {[type]} path string)       (string, error [description]
- * @return {[type]}      [description]
+ * @date   2018-01-24T14:05:55+0800
+ * @param  {[type]} path string) (remotePaths []string, err error [description]
+ * @return {[type]} [description]
  */
-func getRemoteFilePath(path string) (string, error) {
-	for local, remote := range rMap {
+func getRemoteFilePath(path string) (remotePaths []string, err error) {
+	for local, arrRemote := range local2RemoteMap {
 		if strings.Index(path, local) == 0 {
-			return strings.Replace(path, local, remote, 1), nil
+			for _, remote := range arrRemote {
+				remotePaths = append(remotePaths, strings.Replace(path, local, remote, 1))
+			}
+			return
 		}
 	}
-	return "", errors.New("cannot get matched remote path: " + path)
+	err = errors.New("cannot get matched remote path: " + path)
+	return
 }

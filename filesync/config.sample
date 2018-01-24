@@ -11,10 +11,16 @@
         "paths": [
             {
                 "local": "C:\\path\\to\\local\\",
-                "remote": "/path/to/remote/"
+                "remote": [
+                    "/path/to/remote1/",
+                    "/path/to/remote2/"
+                ]
             },{
                 "local": "/path/to/local/",
-                "remote": "/path/to/remote/"
+                "remote": [
+                    "/path/to/remote1/",
+                    "/path/to/remote2/"
+                ]
             }
         ],
         "exclude_files": [

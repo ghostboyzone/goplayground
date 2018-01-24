@@ -26,11 +26,11 @@ type ClientInfo struct {
 }
 
 type Path struct {
-	Local  string `json:"local"`
-	Remote string `json:"remote"`
+	Local  string   `json:"local"`
+	Remote []string `json:"remote"`
 }
 
-type HashMap map[string]string
+type Local2RemoteMap map[string][]string
 
 func NewConf(filePath string) ConfigConf {
 	log.Println("Read Conf: ", filePath)
@@ -44,10 +44,10 @@ func NewConf(filePath string) ConfigConf {
 	return myConf
 }
 
-func (c *ConfigConf) GetPaths() HashMap {
-	rMap := make(HashMap)
+func (c *ConfigConf) GetPaths() Local2RemoteMap {
+	local2RemoteMap := make(Local2RemoteMap)
 	for _, v := range c.Client.Paths {
-		rMap[v.Local] = v.Remote
+		local2RemoteMap[v.Local] = v.Remote
 	}
-	return rMap
+	return local2RemoteMap
 }
