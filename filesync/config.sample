@@ -5,13 +5,16 @@
         "write_buffer_size": 4096
     },
     "client": {
-        "addr": "10.10.10.10:8385",
+        "addr": "10.10.10.10:8989",
         "send_channels": 15,
         "batch_send_files": 100,
         "paths": [
             {
-                "local": "E:\\code\\test\\",
-                "remote": "/home/aaa/test/"
+                "local": "C:\\path\\to\\local\\",
+                "remote": "/path/to/remote/"
+            },{
+                "local": "/path/to/local/",
+                "remote": "/path/to/remote/"
             }
         ],
         "exclude_files": [
