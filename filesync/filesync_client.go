@@ -43,9 +43,12 @@ var (
 	parseConf myConf.ConfigConf
 	dirMsgs   []Message
 	fileMsgs  []Message
+
+	firstRound bool
 )
 
 func main() {
+	firstRound = true
 	confFile := flag.String("conf", "config.json", "-conf config.json")
 	confMod := flag.String("mode", "all", "-mode all | -mode update")
 	flag.Parse()
@@ -74,8 +77,6 @@ func main() {
 
 	dir_max_ch := make(chan int, 1)
 	file_max_ch := make(chan int, parseConf.Client.SendChannels)
-
-	isFirst := true
 
 	for {
 		startTime := time.Now().Unix()
@@ -134,11 +135,13 @@ func main() {
 		}
 
 		endTime := time.Now().Unix()
-		if isFirst || isDirty {
+		if firstRound || isDirty {
 			tStr := formatTimeString(endTime - startTime)
 			log.Println("Cost: ", tStr, ", Everything is now ready!")
 		}
-		isFirst = false
+		if firstRound {
+			firstRound = false
+		}
 		time.Sleep(time.Second * 1)
 	}
 }
