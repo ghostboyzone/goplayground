@@ -9,6 +9,12 @@
 			"revisionTime": "2017-01-31T19:20:18Z"
 		},
 		{
+			"checksumSHA1": "MMjBzzaLztnmyjEs5WHZrCcJSo0=",
+			"path": "github.com/disintegration/imaging",
+			"revision": "5e63c9a565d0a3260d23d060a795783dab90fefe",
+			"revisionTime": "2018-06-03T08:52:56Z"
+		},
+		{
 			"checksumSHA1": "RRuRU1gXrOxRttCtaGXwJVAaq1A=",
 			"path": "github.com/emicklei/proto",
 			"revision": ""
@@ -221,6 +227,24 @@
 			"path": "github.com/tidwall/rtree",
 			"revision": "d4a8a3d30d5729f85edfba1745241f3a621d0359",
 			"revisionTime": "2016-09-03T21:37:29Z"
+		},
+		{
+			"checksumSHA1": "UD/pejajPyS7WaWVXq2NU1eK4Ic=",
+			"path": "golang.org/x/image/bmp",
+			"revision": "af66defab954cb421ca110193eed9477c8541e2a",
+			"revisionTime": "2018-06-01T07:04:50Z"
+		},
+		{
+			"checksumSHA1": "xHj7hC7bSAOdCF/aEfmFAK5i3ns=",
+			"path": "golang.org/x/image/tiff",
+			"revision": "af66defab954cb421ca110193eed9477c8541e2a",
+			"revisionTime": "2018-06-01T07:04:50Z"
+		},
+		{
+			"checksumSHA1": "PF6VjvpNpOdR8epWH1Liyy7x1Qg=",
+			"path": "golang.org/x/image/tiff/lzw",
+			"revision": "af66defab954cb421ca110193eed9477c8541e2a",
+			"revisionTime": "2018-06-01T07:04:50Z"
 		},
 		{
 			"checksumSHA1": "Y+HGqEkYM15ir+J93MEaHdyFy0c=",
