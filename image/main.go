@@ -81,14 +81,14 @@ var (
 
 func main() {
 	InitRGBMap()
-	imgIn, err := imaging.Open("test_1_s2.jpg")
+	imgIn, err := imaging.Open("001.png")
 	if err != nil {
 		log.Fatal(err)
 	}
 	imgHash := GenImageHash(imgIn)
 	log.Println(imgHash)
 
-	imgIn1, err := imaging.Open("dot_dog.jpg")
+	imgIn1, err := imaging.Open("002.png")
 	if err != nil {
 		log.Fatal(err)
 	}
