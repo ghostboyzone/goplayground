@@ -20,7 +20,11 @@ func main() {
 
 	f, _ := os.Open("imglist.txt")
 	scanner := bufio.NewScanner(f)
+
+	cnt := 0
 	for scanner.Scan() {
+		cnt++
+		log.Println("Cnt: ", cnt)
 		lineStr := scanner.Text()
 		list := strings.Split(lineStr, ",")
 		if len(list) < 2 {
@@ -33,10 +37,11 @@ func main() {
 		httpResp, httpErr := http.Get(imgUrl)
 		if httpErr != nil {
 			log.Println(httpErr, "Url: "+imgUrl)
+			continue
 		}
 
 		for _, cat := range catList {
-			os.MkdirAll(baseDir+"/"+cat, 0666)
+			os.MkdirAll(baseDir+"/"+cat, 0755)
 			// tmpFile, tmpFileErr := os.Create(baseDir + "/" + cat + "/" + getRandFileName())
 			tmpFile, tmpFileErr := os.Create(baseDir + "/" + cat + "/" + getMd5FileName(imgUrl))
 			if tmpFileErr != nil {
