@@ -2,7 +2,7 @@
 * @Author: wenhao.ma
 * @Date:   2018-07-02 16:52:40
 * @Last Modified by:   wenhao.ma
-* @Last Modified time: 2018-07-02 17:42:18
+* @Last Modified time: 2018-07-03 13:52:08
  */
 package main
 
@@ -41,10 +41,12 @@ func main() {
 	maxCh = make(chan int, 50)
 	total := 0
 	// maxStr := "1731606000"
-	maxStr := "1731600321"
+	maxStr := ""
 	for {
 		urlV := url.Values{}
-		urlV.Add("max", maxStr)
+		if len(maxStr) != 0 {
+			urlV.Add("max", maxStr)
+		}
 		urlV.Add("limit", "20")
 		urlV.Add("wfl", "1")
 		reqUrl := "http://huaban.com/all" + "?" + urlV.Encode()
