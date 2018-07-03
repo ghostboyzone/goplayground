@@ -2,7 +2,7 @@
 * @Author: wenhao.ma
 * @Date:   2018-07-02 16:52:40
 * @Last Modified by:   wenhao.ma
-* @Last Modified time: 2018-07-03 13:52:08
+* @Last Modified time: 2018-07-03 13:57:21
  */
 package main
 
@@ -38,6 +38,9 @@ var (
 )
 
 func main() {
+	fd, _ := os.OpenFile("huaban_imglist.txt", os.O_RDWR|os.O_CREATE, 0755)
+	defer fd.Close()
+
 	maxCh = make(chan int, 50)
 	total := 0
 	// maxStr := "1731606000"
@@ -84,10 +87,11 @@ func main() {
 
 		for _, tPin := range hbResult.Pins {
 			imgUrl := "http://img.hb.aicdn.com/" + tPin.File.Key
-			maxCh <- 1
-			go DownloadImage(imgUrl, "tmp1")
+			// maxCh <- 1
+			// go DownloadImage(imgUrl, "tmp1")
 			total++
 			log.Println(imgUrl, total)
+			fd.WriteString(imgUrl + "\n")
 		}
 		log.Println(hbResult.Pins[pinLen-1].PinId)
 		maxStr = strconv.Itoa(hbResult.Pins[pinLen-1].PinId)
